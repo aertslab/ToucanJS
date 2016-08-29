@@ -1,0 +1,49 @@
+div .block {
+    display: block;
+    margin: 30px 50px;
+    padding: 0px 20px 20px 20px;
+    border: solid 2px;
+}
+
+#content {
+    min-width: 960px;
+    /*max-width: 960px;*/
+    width: 80%;
+    margin: 20px auto;
+    border-style: solid;
+}
+
+h1 {
+    text-align: center;
+}
+
+#input_files_block {
+    /*display: block;*/
+    /*margin: 30px 50px;*/
+    /*padding: 20px;*/
+    /*border: solid 2px;*/
+}
+
+#feature_ids {
+    /*display: block;*/
+    /*margin: 30px 50px;*/
+    /*padding: 20px;*/
+    /*border: solid 2px;*/
+}
+
+#feature_ids ul li {
+    list-style-type: none;
+}
+
+#svg {
+    overflow-x: auto;
+}
+
+#toucanjs_svg {
+    display: block;
+    margin: 20px auto;
+    border: solid 2px;
+}
+
+
+button {margin-right: 5px}

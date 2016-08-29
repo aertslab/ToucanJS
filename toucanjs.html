@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>TOUCAN.JS</title>
+    <script type="text/javascript" src="toucanjs.js"></script>
+    <!-- Generate attractive random colors: https://github.com/davidmerfield/randomColor -->
+    <script type="text/javascript" src="randomColor.js"></script>
+    <!-- Web color picker: http://jscolor.com/ -->
+    <script type="text/javascript" src="jscolor.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="toucanjs.css">
+</head>
+<body>
+
+<div id="content">
+    <h1>TOUCAN.JS</h1>
+
+    <div id="input_files_block" class="block">
+        <h2>Input files</h2>
+
+        <label for="gff_file_input">Load GFF file with features:<br /></label>
+        <input type="file" id="gff_file_input" />
+    </div>
+
+    <div>
+        <div id="feature_ids" class="block">
+            <h2>Legend</h2>
+        </div>
+        <div id="svg">
+            <svg id="toucanjs_svg"
+                 version="1.1"
+                 baseProfile="full"
+                 width="800"
+                 height="600"
+                 xmlns="http://www.w3.org/2000/svg">
+                <style>
+                    g g rect:hover
+                    {
+                        fill-opacity: 0.9;
+                        stroke-opacity: 1.0;
+                        stroke-width: 1;
+                    }
+                    g g rect
+                    {
+                        fill-opacity: 0.1;
+                        stroke-opacity: 1.0;
+                        stroke-width: 1;
+                    }
+                </style>
+            </svg>
+        </div>
+    </div>
+</div>
+
+<script type="text/javascript">
+    document.getElementById('gff_file_input').addEventListener('change', readGFFFile, false);
+</script>
+
+</body>
+</html>
