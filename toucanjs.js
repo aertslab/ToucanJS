@@ -119,6 +119,7 @@ function readGFFFile(evt) {
 function createTOUCANSVG() {
     var svgNS = 'http://www.w3.org/2000/svg';
     var toucanjsSVG = document.getElementById('toucanjs_svg');
+    var toucanjsSVGDefs = document.getElementsByTagNameNS(svgNS, 'defs')[0];
     var featureIDsdiv = document.getElementById('feature_ids');
     var featureNamesAndColors = {};
     var attributeNameID = 'Name';
@@ -220,6 +221,7 @@ function createTOUCANSVG() {
                 'matrix(' + regionLineXScaling.toString() + ' 0  0 ' + regionLineYScaling.toString() + ' 300 0)');
 
             var regionLine = document.createElementNS(svgNS, 'rect');
+            regionLine.setAttributeNS(null, 'class', 'region_line');
             regionLine.setAttributeNS(null, 'x', '0');
             regionLine.setAttributeNS(null, 'y', '0');
             regionLine.setAttributeNS(null, 'height', '1');
@@ -233,14 +235,48 @@ function createTOUCANSVG() {
         }
 
         var feature = document.createElementNS(svgNS, 'rect');
-        feature.setAttributeNS(null, 'x', gffFeature.relativeStart.toString());
+        var featureCoordAndSize = {};
+
+        featureCoordAndSize.x = gffFeature.relativeStart.toString();
         if (gffFeature.strand == '-') {
-            feature.setAttributeNS(null, 'y', '1');
+            featureCoordAndSize.y = '1';
         } else {
-            feature.setAttributeNS(null, 'y', '-' + (gffFeature.score * featureScoreScaling).toString());
+            featureCoordAndSize.y = '-' + (gffFeature.score * featureScoreScaling).toString();
         }
-        feature.setAttributeNS(null, 'height', (gffFeature.score * featureScoreScaling).toString());
-        feature.setAttributeNS(null, 'width', (gffFeature.relativeEnd - gffFeature.relativeStart + 1).toString());
+        featureCoordAndSize.height = (gffFeature.score * featureScoreScaling).toString();
+        featureCoordAndSize.width = (gffFeature.relativeEnd - gffFeature.relativeStart + 1).toString();
+
+        var featureCoordAndSizeDefID =
+            'x_' + featureCoordAndSize.x
+            + 'y_' + featureCoordAndSize.y
+            + 'height_' + featureCoordAndSize.height
+            + 'width_' + featureCoordAndSize.width;
+
+        var featureCoordAndSizeDefClipPath = toucanjsSVG.getElementById(featureCoordAndSizeDefID);
+
+        if (featureCoordAndSizeDefClipPath == null) {
+            featureCoordAndSizeDefClipPath = document.createElementNS(svgNS, 'clipPath');
+            featureCoordAndSizeDefClipPath.setAttributeNS(null, 'id', featureCoordAndSizeDefID);
+
+
+            var featureCoordAndSizeDefClipPathRect = document.createElementNS(svgNS, 'rect');
+
+            featureCoordAndSizeDefClipPathRect.setAttributeNS(null, 'x', featureCoordAndSize.x);
+            featureCoordAndSizeDefClipPathRect.setAttributeNS(null, 'y', featureCoordAndSize.y);
+            featureCoordAndSizeDefClipPathRect.setAttributeNS(null, 'height', featureCoordAndSize.height);
+            featureCoordAndSizeDefClipPathRect.setAttributeNS(null, 'width', featureCoordAndSize.width);
+
+            featureCoordAndSizeDefClipPath.appendChild(featureCoordAndSizeDefClipPathRect);
+
+            toucanjsSVGDefs.appendChild(featureCoordAndSizeDefClipPath);
+        }
+
+        feature.setAttributeNS(null, 'x', featureCoordAndSize.x);
+        feature.setAttributeNS(null, 'y', featureCoordAndSize.y);
+        feature.setAttributeNS(null, 'height', featureCoordAndSize.height);
+        feature.setAttributeNS(null, 'width', featureCoordAndSize.width);
+        feature.setAttributeNS(null, 'clip-path', 'url(#' + featureCoordAndSizeDefID + ')');
+
         if (!(gffFeature.attributes[attributeNameID] in featureNamesAndColors)) {
             featureNamesAndColors[gffFeature.attributes[attributeNameID]] = randomColor({luminosity: 'dark'});
         }
