@@ -129,6 +129,7 @@ function createTOUCANSVG() {
     var regionCount = 0;
     var regionHeight = 50;
     var longestRegionSize = 0;
+    var axisTicksSpacing = 100;
 
     var background = document.createElementNS(svgNS, 'rect');
     background.setAttributeNS(null, 'height', '100%');
@@ -156,6 +157,33 @@ function createTOUCANSVG() {
             numberOfUniqueFeatures += 1;
         }
     });
+
+    var axisGroup = document.createElementNS(svgNS, 'g');
+    axisGroup.setAttributeNS(null, 'transform', 'matrix(' + regionLineXScaling.toString() + ' 0  0 1 300 200)');
+
+    var axisBar = document.createElementNS(svgNS, 'path');
+    axisBar.setAttributeNS(null, 'fill', 'none');
+    axisBar.setAttributeNS(null, 'stroke', 'black');
+    axisBar.setAttributeNS(null, 'stroke-width', '1');
+
+    var axisBarPath = 'M 0 0 L ' + longestRegionSize.toString() + ' 0';
+
+    for (var x = 0; x <= longestRegionSize; x += axisTicksSpacing) {
+        axisBarPath += ' M ' + x.toString() + ' -5 L ' + x.toString() + ' 5';
+
+        var axisTickText = document.createElementNS(svgNS, 'text');
+        axisTickText.setAttributeNS(null, 'x', x.toString());
+        axisTickText.setAttributeNS(null, 'y', '-20');
+        axisTickText.setAttributeNS(null, 'font-size', 16);
+        axisTickText.setAttributeNS(null, 'text-anchor', 'middle');
+        axisTickText.setAttributeNS(null, 'fill', 'black');
+        var axisTickTextData = document.createTextNode(x.toString());
+        axisTickText.appendChild(axisTickTextData);
+        axisGroup.appendChild(axisTickText);
+    }
+    axisBar.setAttributeNS(null, 'd', axisBarPath);
+    axisGroup.appendChild(axisBar);
+    toucanjsSVG.appendChild(axisGroup);
 
     var randomColorsForFeatures = randomColor({luminosity: 'dark', count: numberOfUniqueFeatures});
     var colorIdx = 0;
@@ -186,11 +214,11 @@ function createTOUCANSVG() {
 
     gffFeatures.forEach(function(gffFeature) {
         var regionGroupID = 'region__' + gffFeature.seqID;
-        var regionGroupIDLine = 'region__line__' + gffFeature.seqID;
+        var regionLineGroupID = 'region__line__' + gffFeature.seqID;
         console.log(regionGroupID);
 
         var regionGroup = document.getElementById(regionGroupID);
-        var regionGroupLine = document.getElementById(regionGroupIDLine);
+        var regionLineGroup = document.getElementById(regionLineGroupID);
         console.log(regionGroup);
 
         if (regionGroup == null) {
@@ -199,7 +227,7 @@ function createTOUCANSVG() {
             regionGroup = document.createElementNS(svgNS, 'g');
 
             regionGroup.setAttributeNS(null, 'id', regionGroupID);
-            regionGroup.setAttributeNS(null, 'transform', 'translate(0 ' + (regionCount * regionHeight * regionLineYScaling + 100) + ')');
+            regionGroup.setAttributeNS(null, 'transform', 'translate(0 ' + (regionCount * regionHeight * regionLineYScaling + 200) + ')');
 
             var regionName = document.createElementNS(svgNS, 'text');
             regionName.setAttributeNS(null, 'x', '280');
@@ -207,29 +235,30 @@ function createTOUCANSVG() {
             regionName.setAttributeNS(null, 'font-size', '16');
             regionName.setAttributeNS(null, 'text-anchor', 'end');
             regionName.setAttributeNS(null, 'fill', 'black');
-
             var regionNameData = document.createTextNode(gffFeature.seqID);
             regionName.appendChild(regionNameData);
 
             regionGroup.appendChild(regionName);
 
-            regionGroupLine = document.createElementNS(svgNS, 'g');
+            regionLineGroup = document.createElementNS(svgNS, 'g');
 
-            regionGroupLine.setAttributeNS(null, 'id', regionGroupIDLine);
-            //regionGroupLine.setAttributeNS(null, 'transform', 'scale(' + regionLineXscale.toString() + ',' + regionLineYScaling.toString() + ')');
-            regionGroupLine.setAttributeNS(null, 'transform',
+            regionLineGroup.setAttributeNS(null, 'id', regionLineGroupID);
+            regionLineGroup.setAttributeNS(null, 'transform',
                 'matrix(' + regionLineXScaling.toString() + ' 0  0 ' + regionLineYScaling.toString() + ' 300 0)');
 
-            var regionLine = document.createElementNS(svgNS, 'rect');
-            regionLine.setAttributeNS(null, 'class', 'region_line');
-            regionLine.setAttributeNS(null, 'x', '0');
-            regionLine.setAttributeNS(null, 'y', '0');
-            regionLine.setAttributeNS(null, 'height', '1');
-            regionLine.setAttributeNS(null, 'width', (gffFeature.regionGenomicEnd - gffFeature.regionGenomicStart).toString());
-            regionLine.setAttributeNS(null, 'fill', 'gray');
-            regionGroupLine.appendChild(regionLine);
+            var regionTicksLine = document.createElementNS(svgNS, 'path');
+            regionTicksLine.setAttributeNS(null, 'fill', 'none');
+            regionTicksLine.setAttributeNS(null, 'stroke', 'gray');
+            regionTicksLine.setAttributeNS(null, 'stroke-width', '1');
 
-            regionGroup.appendChild(regionGroupLine);
+            var regionTicksLinePath = 'M 0 0 L ' + (gffFeature.regionGenomicEnd - gffFeature.regionGenomicStart).toString() + ' 0';
+
+            for (var x = 0; x <= (gffFeature.regionGenomicEnd - gffFeature.regionGenomicStart); x += axisTicksSpacing){
+                regionTicksLinePath += ' M ' + x.toString() + ' -5 L ' + x.toString() + ' 5';
+            }
+            regionTicksLine.setAttributeNS(null, 'd', regionTicksLinePath);
+            regionLineGroup.appendChild(regionTicksLine);
+            regionGroup.appendChild(regionLineGroup);
 
             toucanjsSVG.appendChild(regionGroup);
         }
@@ -306,10 +335,10 @@ function createTOUCANSVG() {
         featureTooltip.appendChild(featureTooltipData);
         feature.appendChild(featureTooltip);
 
-        regionGroupLine.appendChild(feature);
+        regionLineGroup.appendChild(feature);
     });
 
-    toucanjsSVG.setAttribute('height', (regionCount * regionHeight * regionLineYScaling + regionHeight * regionLineYScaling + 80).toString());
+    toucanjsSVG.setAttribute('height', (regionCount * regionHeight * regionLineYScaling + regionHeight * regionLineYScaling + 200).toString());
     toucanjsSVG.setAttribute('width', (longestRegionSize * regionLineXScaling + 400).toString());
     title.setAttributeNS(null, 'x', ((longestRegionSize * regionLineXScaling + 400) / 2).toString());
 }
