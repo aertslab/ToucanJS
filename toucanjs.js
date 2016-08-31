@@ -115,6 +115,7 @@ function createToucanJsSvg() {
     var toucanjsSVG = document.getElementById('toucanjs_svg');
     var toucanjsSVGDefs = document.getElementsByTagNameNS(svgNS, 'defs')[0];
     var featureIDsdiv = document.getElementById('feature_ids');
+    var seqIDToRegionSize = {};
     var featureNamesAndColors = {};
     var attributeNameID = 'Name';
     var regionLineXScaling = 1.0;
@@ -144,7 +145,20 @@ function createToucanJsSvg() {
     var numberOfUniqueFeatures = 0;
 
     gffFeatures.forEach(function(gffFeature) {
-        longestRegionSize = Math.max(longestRegionSize, (gffFeature.regionGenomicEnd - gffFeature.regionGenomicStart));
+        var currentRegionSize = 0;
+        if ('regionGenomicStart' in gffFeature && 'regionGenomicEnd' in gffFeature) {
+            currentRegionSize = gffFeature.regionGenomicEnd - gffFeature.regionGenomicStart;
+        } else {
+            currentRegionSize = gffFeature.relativeEnd;
+        }
+
+        longestRegionSize = Math.max(longestRegionSize, currentRegionSize);
+
+        if (! (gffFeature.seqID in seqIDToRegionSize)) {
+            seqIDToRegionSize[gffFeature.seqID] = currentRegionSize;
+        } else {
+            seqIDToRegionSize[gffFeature.seqID] = Math.max(seqIDToRegionSize[gffFeature.seqID], currentRegionSize);
+        }
 
         if (! (gffFeature.attributes[attributeNameID] in featureNamesAndColors)) {
             featureNamesAndColors[gffFeature.attributes[attributeNameID]] = 'gray';
@@ -245,9 +259,9 @@ function createToucanJsSvg() {
             regionTicksLine.setAttributeNS(null, 'stroke', 'gray');
             regionTicksLine.setAttributeNS(null, 'stroke-width', '1');
 
-            var regionTicksLinePath = 'M 0 0 L ' + (gffFeature.regionGenomicEnd - gffFeature.regionGenomicStart).toString() + ' 0';
+            var regionTicksLinePath = 'M 0 0 L ' + seqIDToRegionSize[gffFeature.seqID].toString() + ' 0';
 
-            for (var x = 0; x <= (gffFeature.regionGenomicEnd - gffFeature.regionGenomicStart); x += axisTicksSpacing){
+            for (var x = 0; x <= seqIDToRegionSize[gffFeature.seqID]; x += axisTicksSpacing){
                 regionTicksLinePath += ' M ' + x.toString() + ' -5 L ' + x.toString() + ' 5';
             }
             regionTicksLine.setAttributeNS(null, 'd', regionTicksLinePath);
@@ -311,9 +325,11 @@ function createToucanJsSvg() {
         featureTooltipData.nodeValue += '\nScore: ' + gffFeature.score.toString();
         featureTooltipData.nodeValue += '\nRelative start: ' + gffFeature.relativeStart.toString();
         featureTooltipData.nodeValue += '\nRelative end: ' + gffFeature.relativeEnd.toString();
-        featureTooltipData.nodeValue += '\nGenomic chromosome: ' + gffFeature.genomicChrom.toString();
-        featureTooltipData.nodeValue += '\nGenomic start: ' + gffFeature.genomicStart.toString();
-        featureTooltipData.nodeValue += '\nGenomic end: ' + gffFeature.genomicEnd.toString();
+        if ('genomicChrom' in gffFeature) {
+            featureTooltipData.nodeValue += '\nGenomic chromosome: ' + gffFeature.genomicChrom.toString();
+            featureTooltipData.nodeValue += '\nGenomic start: ' + gffFeature.genomicStart.toString();
+            featureTooltipData.nodeValue += '\nGenomic end: ' + gffFeature.genomicEnd.toString();
+        }
         featureTooltipData.nodeValue += '\nStrand: ' + gffFeature.strand;
         featureTooltipData.nodeValue += '\nPhase: ' + gffFeature.phase;
         featureTooltipData.nodeValue += '\nSeqID: ' + gffFeature.seqID;
