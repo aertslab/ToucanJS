@@ -101,7 +101,7 @@ function readGFFFile(evt) {
             console.log('nbr of GFF features: ' + gffFeatures.length);
 
             // Create feature map SVG for GFF features.
-            createTOUCANSVG();
+            createToucanJsSvg();
         };
 
         reader.readAsText(gffFile);
@@ -110,7 +110,7 @@ function readGFFFile(evt) {
 
 
 
-function createTOUCANSVG() {
+function createToucanJsSvg() {
     var svgNS = 'http://www.w3.org/2000/svg';
     var toucanjsSVG = document.getElementById('toucanjs_svg');
     var toucanjsSVGDefs = document.getElementsByTagNameNS(svgNS, 'defs')[0];
