@@ -25,12 +25,6 @@ function ParseGFFLine(gffLine) {
 }
 
 
-function GFFAttribute(id, value) {
-    this.id = id;
-    this.value = value;
-}
-
-
 function GFFFeature(seqID, source, featureType, startStr, endStr, score, strand, phase, attributesStr) {
     this.seqID = seqID;
     this.source = source;
