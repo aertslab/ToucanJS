@@ -27,6 +27,8 @@ function ToucanJs() {
         options.regionHeight = 50;
         options.longestRegionSize = 0;
         options.axisTicksSpacing = 100;
+
+        options.backgroundColor = 'white';
     }
 
 
@@ -130,12 +132,31 @@ function ToucanJs() {
     }
 
 
+    function setBackground(backgroundColor) {
+        /* Draw background of SVG. */
+
+        if (backgroundColor === undefined) {
+            /* Set the title text to value specified in the options object, if it was not specified. */
+            backgroundColor = options.backgroundColor;
+        }
+
+        var background = toucanjsSVG.getElementById('svg_background');
+
+        if (background === null) {
+            /* Add a background element if it did not exist yet. */
+            background = document.createElementNS(svgNS, 'rect');
+            background.setAttributeNS(null, 'id', 'svg_background');
+            background.setAttributeNS(null, 'height', '100%');
+            background.setAttributeNS(null, 'width', '100%');
+            toucanjsSVG.appendChild(background);
+        }
+
+        background.setAttributeNS(null, 'fill', backgroundColor);
+    }
+
+
     function drawSVG() {
-        var background = document.createElementNS(svgNS, 'rect');
-        background.setAttributeNS(null, 'height', '100%');
-        background.setAttributeNS(null, 'width', '100%');
-        background.setAttributeNS(null, 'fill', 'white');
-        toucanjsSVG.appendChild(background);
+        setBackground();
 
         var title = document.createElementNS(svgNS, 'text');
         title.setAttributeNS(null, 'x', '700');
