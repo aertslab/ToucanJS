@@ -265,6 +265,9 @@ function ToucanJs() {
         /* Set background. */
         setBackground();
 
+        /* Set and center title. */
+        setTitle(options.titleText);
+
         var randomColorsForFeatures = randomColor({luminosity: 'dark', count: numberOfUniqueFeatures});
         var colorIdx = 0;
 
@@ -423,9 +426,6 @@ function ToucanJs() {
         toucanjsSVG.setAttribute('height', (options.regionCount * options.regionHeight * options.regionLineYScaling
                                             + options.regionHeight * options.regionLineYScaling + 200).toString());
         toucanjsSVG.setAttribute('width', (options.longestRegionSize * options.regionLineXScaling + 400).toString());
-
-        /* Set and center title. */
-        setTitle(options.titleText);
 
         /* Set axis tick spacing. */
         setAxisTicksSpacing(options.axisTicksSpacing);
