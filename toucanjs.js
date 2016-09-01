@@ -268,6 +268,9 @@ function ToucanJs() {
         /* Set and center title. */
         setTitle(options.titleText);
 
+        /* Set axis tick spacing. */
+        setAxisTicksSpacing(options.axisTicksSpacing);
+
         var randomColorsForFeatures = randomColor({luminosity: 'dark', count: numberOfUniqueFeatures});
         var colorIdx = 0;
 
@@ -427,8 +430,6 @@ function ToucanJs() {
                                             + options.regionHeight * options.regionLineYScaling + 200).toString());
         toucanjsSVG.setAttribute('width', (options.longestRegionSize * options.regionLineXScaling + 400).toString());
 
-        /* Set axis tick spacing. */
-        setAxisTicksSpacing(options.axisTicksSpacing);
     }
 
     reset();
