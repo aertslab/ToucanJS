@@ -134,7 +134,7 @@ function ToucanJs() {
 
 
     function setBackground(backgroundColor) {
-        /* Draw background of SVG. */
+        /* Set background of SVG. */
 
         if (backgroundColor === undefined) {
             /* Set the title text to value specified in the options object, if it was not specified. */
@@ -238,8 +238,6 @@ function ToucanJs() {
 
 
     function drawSVG() {
-        setBackground();
-
         var numberOfUniqueFeatures = 0;
 
         gffFeatures.forEach(function (gffFeature) {
@@ -263,6 +261,9 @@ function ToucanJs() {
                 numberOfUniqueFeatures += 1;
             }
         });
+
+        /* Set background. */
+        setBackground();
 
         var randomColorsForFeatures = randomColor({luminosity: 'dark', count: numberOfUniqueFeatures});
         var colorIdx = 0;
