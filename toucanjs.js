@@ -43,7 +43,7 @@ function ToucanJs() {
     function ParseGFFLine(gffLine) {
         var gffColumns = gffLine.split('\n', 1)[0].split('\t');
 
-        if (gffColumns.length == 9 && gffColumns[0].length != 0 && gffColumns[0][0] != '#') {
+        if (gffColumns.length === 9 && gffColumns[0].length !== 0 && gffColumns[0][0] !== '#') {
             return new GFFFeature(...gffColumns);
         }
     }
@@ -82,7 +82,7 @@ function ToucanJs() {
             this.genomicStart = this.regionGenomicStart + this.relativeStart - 1;
             this.genomicEnd = this.regionGenomicStart + this.relativeEnd - 1;
 
-            if (re_chrom_pos_from_seqID_match.length == 5) {
+            if (re_chrom_pos_from_seqID_match.length === 5) {
                 this.gene = re_chrom_pos_from_seqID_match[4];
             }
         }
@@ -98,9 +98,9 @@ function ToucanJs() {
         // Retrieve the first (and only!) File from the FileList object.
         var gffFile = evt.target.files[0];
 
-        if (!gffFile) {
+        if (! gffFile) {
             alert("Failed to read file \"" + gffFile.name + "\"");
-        } else if (!getFileExtension(gffFile.name).match(/gff(3)*/)) {
+        } else if (! getFileExtension(gffFile.name).match(/gff(3)*/)) {
             alert("\"" + gffFile.name + "\" is not a GFF file.");
         } else {
             var reader = new FileReader();
@@ -159,13 +159,13 @@ function ToucanJs() {
 
             options.longestRegionSize = Math.max(options.longestRegionSize, currentRegionSize);
 
-            if (!(gffFeature.seqID in options.seqIDToRegionSize)) {
+            if (! (gffFeature.seqID in options.seqIDToRegionSize)) {
                 options.seqIDToRegionSize[gffFeature.seqID] = currentRegionSize;
             } else {
                 options.seqIDToRegionSize[gffFeature.seqID] = Math.max(options.seqIDToRegionSize[gffFeature.seqID], currentRegionSize);
             }
 
-            if (!(gffFeature.attributes[options.attributeNameID] in options.featureNamesToColors)) {
+            if (! (gffFeature.attributes[options.attributeNameID] in options.featureNamesToColors)) {
                 options.featureNamesToColors[gffFeature.attributes[options.attributeNameID]] = 'gray';
                 numberOfUniqueFeatures += 1;
             }
@@ -234,7 +234,7 @@ function ToucanJs() {
             var regionLineGroup = document.getElementById(regionLineGroupID);
             console.log(regionGroup);
 
-            if (regionGroup == null) {
+            if (regionGroup === null) {
                 options.regionCount += 1;
 
                 regionGroup = document.createElementNS(svgNS, 'g');
@@ -280,7 +280,7 @@ function ToucanJs() {
             var featureCoordAndSize = {};
 
             featureCoordAndSize.x = gffFeature.relativeStart.toString();
-            if (gffFeature.strand == '-') {
+            if (gffFeature.strand === '-') {
                 featureCoordAndSize.y = '1';
             } else {
                 featureCoordAndSize.y = '-' + (gffFeature.score * options.featureScoreScaling).toString();
@@ -296,7 +296,7 @@ function ToucanJs() {
 
             var featureCoordAndSizeDefClipPath = toucanjsSVG.getElementById(featureCoordAndSizeDefID);
 
-            if (featureCoordAndSizeDefClipPath == null) {
+            if (featureCoordAndSizeDefClipPath === null) {
                 featureCoordAndSizeDefClipPath = document.createElementNS(svgNS, 'clipPath');
                 featureCoordAndSizeDefClipPath.setAttributeNS(null, 'id', featureCoordAndSizeDefID);
 
@@ -319,7 +319,7 @@ function ToucanJs() {
             feature.setAttributeNS(null, 'width', featureCoordAndSize.width);
             feature.setAttributeNS(null, 'clip-path', 'url(#' + featureCoordAndSizeDefID + ')');
 
-            if (!(gffFeature.attributes[options.attributeNameID] in options.featureNamesToColors)) {
+            if (! (gffFeature.attributes[options.attributeNameID] in options.featureNamesToColors)) {
                 options.featureNamesToColors[gffFeature.attributes[options.attributeNameID]] = randomColor({luminosity: 'dark'});
             }
             feature.setAttributeNS(null, 'fill', options.featureNamesToColors[gffFeature.attributes[options.attributeNameID]]);
@@ -342,7 +342,7 @@ function ToucanJs() {
             featureTooltipData.nodeValue += '\nFeature type: ' + gffFeature.featureType;
 
             for (var attributeID in gffFeature.attributes) {
-                if (attributeID != options.attributeNameID) {
+                if (attributeID !== options.attributeNameID) {
                     featureTooltipData.nodeValue += '\n' + attributeID + ': ' + gffFeature.attributes[attributeID];
                 }
             }
