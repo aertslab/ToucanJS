@@ -186,6 +186,57 @@ function ToucanJs() {
     }
 
 
+    function setAxisTicksSpacing(axisTicksSpacing) {
+        /* Set axis ticks spacing. */
+
+        if (axisTicksSpacing === undefined) {
+            /* Set the title text to value specified in the options object, if it was not specified. */
+            axisTicksSpacing =  options.axisTicksSpacing;
+        }
+
+        /* Get the old axisGroup if it exist. */
+        var axisGroupOld = toucanjsSVG.getElementById('svg_axis');
+
+        /* Create a new axisGroup. */
+        var axisGroup = document.createElementNS(svgNS, 'g');
+        axisGroup.setAttributeNS(null, 'id', 'svg_axis');
+        axisGroup.setAttributeNS(null, 'transform', 'matrix(' + options.regionLineXScaling.toString() + ' 0  0 1 300 200)');
+
+        var axisBar = document.createElementNS(svgNS, 'path');
+        axisBar.setAttributeNS(null, 'fill', 'none');
+        axisBar.setAttributeNS(null, 'stroke', 'black');
+        axisBar.setAttributeNS(null, 'stroke-width', '1');
+
+        var axisBarPath = 'M 0 0 L ' + options.longestRegionSize.toString() + ' 0';
+
+        for (var x = 0; x <= options.longestRegionSize; x += axisTicksSpacing) {
+            /* Add each tick to the axisBarPath. */
+            axisBarPath += ' M ' + x.toString() + ' -5 L ' + x.toString() + ' 5';
+
+            /* Add corresponding distance above the tick. */
+            var axisTickText = document.createElementNS(svgNS, 'text');
+            axisTickText.setAttributeNS(null, 'x', x.toString());
+            axisTickText.setAttributeNS(null, 'y', '-20');
+            axisTickText.setAttributeNS(null, 'font-size', 16);
+            axisTickText.setAttributeNS(null, 'text-anchor', 'middle');
+            axisTickText.setAttributeNS(null, 'fill', 'black');
+            var axisTickTextData = document.createTextNode(x.toString());
+            axisTickText.appendChild(axisTickTextData);
+            axisGroup.appendChild(axisTickText);
+        }
+        axisBar.setAttributeNS(null, 'd', axisBarPath);
+        axisGroup.appendChild(axisBar);
+
+        if (axisGroupOld === null) {
+            /* Add axisGroup, if there was not axis group before. */
+            toucanjsSVG.appendChild(axisGroup);
+        } else {
+            /* Replace old axisGroup, with new one. */
+            toucanjsSVG.replaceChild(axisGroup, axisGroupOld);
+        }
+    }
+
+
     function drawSVG() {
         setBackground();
 
@@ -212,33 +263,6 @@ function ToucanJs() {
                 numberOfUniqueFeatures += 1;
             }
         });
-
-        var axisGroup = document.createElementNS(svgNS, 'g');
-        axisGroup.setAttributeNS(null, 'transform', 'matrix(' + options.regionLineXScaling.toString() + ' 0  0 1 300 200)');
-
-        var axisBar = document.createElementNS(svgNS, 'path');
-        axisBar.setAttributeNS(null, 'fill', 'none');
-        axisBar.setAttributeNS(null, 'stroke', 'black');
-        axisBar.setAttributeNS(null, 'stroke-width', '1');
-
-        var axisBarPath = 'M 0 0 L ' + options.longestRegionSize.toString() + ' 0';
-
-        for (var x = 0; x <= options.longestRegionSize; x += options.axisTicksSpacing) {
-            axisBarPath += ' M ' + x.toString() + ' -5 L ' + x.toString() + ' 5';
-
-            var axisTickText = document.createElementNS(svgNS, 'text');
-            axisTickText.setAttributeNS(null, 'x', x.toString());
-            axisTickText.setAttributeNS(null, 'y', '-20');
-            axisTickText.setAttributeNS(null, 'font-size', 16);
-            axisTickText.setAttributeNS(null, 'text-anchor', 'middle');
-            axisTickText.setAttributeNS(null, 'fill', 'black');
-            var axisTickTextData = document.createTextNode(x.toString());
-            axisTickText.appendChild(axisTickTextData);
-            axisGroup.appendChild(axisTickText);
-        }
-        axisBar.setAttributeNS(null, 'd', axisBarPath);
-        axisGroup.appendChild(axisBar);
-        toucanjsSVG.appendChild(axisGroup);
 
         var randomColorsForFeatures = randomColor({luminosity: 'dark', count: numberOfUniqueFeatures});
         var colorIdx = 0;
@@ -401,6 +425,9 @@ function ToucanJs() {
 
         /* Set and center title. */
         setTitle(options.titleText);
+
+        /* Set axis tick spacing. */
+        setAxisTicksSpacing(options.axisTicksSpacing);
     }
 
     reset();
