@@ -20,6 +20,15 @@
 
         <label for="gff_file_input">Load GFF file with features:<br /></label>
         <input type="file" id="gff_file_input" />
+        <br />
+
+        <label for="button_draw">Draw features:<br /></label>
+        <button id="button_draw" >Draw</button>
+        <br />
+
+        <label for="button_reset">Reset figure:<br /></label>
+        <button id="button_reset" >Reset</button>
+        <br />
     </div>
 
     <div>
@@ -62,7 +71,10 @@
 </div>
 
 <script type="text/javascript">
-    document.getElementById('gff_file_input').addEventListener('change', readGFFFile, false);
+    var toucanJs = ToucanJs();
+    document.getElementById('gff_file_input').addEventListener('change', toucanJs.readGFFFile, false);
+    document.getElementById('button_draw').addEventListener('click', toucanJs.drawSVG, false);
+    document.getElementById('button_reset').addEventListener('click', toucanJs.reset, false);
 </script>
 
 </body>
