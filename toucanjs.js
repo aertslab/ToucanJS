@@ -29,6 +29,7 @@ function ToucanJs() {
         options.axisTicksSpacing = 100;
 
         options.backgroundColor = 'white';
+        options.titleText = 'TOUCANJS';
     }
 
 
@@ -155,18 +156,38 @@ function ToucanJs() {
     }
 
 
+    function setTitle(titleText) {
+        /* Set title of SVG. */
+
+        if (titleText === undefined) {
+            /* Set the title text to value specified in the options object, if it was not specified. */
+            titleText = options.titleText;
+        }
+
+        var title = toucanjsSVG.getElementById('svg_title');
+
+        if (title === null) {
+            /* Add a title element if it did not exist yet. */
+            title = document.createElementNS(svgNS, 'text');
+            title.setAttributeNS(null, 'id', 'svg_title');
+            title.setAttributeNS(null, 'y', '80');
+            title.setAttributeNS(null, 'font-size', 60);
+            title.setAttributeNS(null, 'text-anchor', 'middle');
+            title.setAttributeNS(null, 'fill', 'black');
+            var titleData = document.createTextNode(titleText);
+            title.appendChild(titleData);
+            toucanjsSVG.appendChild(title);
+        } else {
+            title.firstChild.nodeValue = titleText;
+        }
+
+        /* Center the title. */
+        title.setAttributeNS(null, 'x', ((options.longestRegionSize * options.regionLineXScaling + 400) / 2).toString());
+    }
+
+
     function drawSVG() {
         setBackground();
-
-        var title = document.createElementNS(svgNS, 'text');
-        title.setAttributeNS(null, 'x', '700');
-        title.setAttributeNS(null, 'y', '80');
-        title.setAttributeNS(null, 'font-size', 60);
-        title.setAttributeNS(null, 'text-anchor', 'middle');
-        title.setAttributeNS(null, 'fill', 'black');
-        var titleData = document.createTextNode('TOUCANJS');
-        title.appendChild(titleData);
-        toucanjsSVG.appendChild(title);
 
         var numberOfUniqueFeatures = 0;
 
@@ -377,7 +398,9 @@ function ToucanJs() {
         toucanjsSVG.setAttribute('height', (options.regionCount * options.regionHeight * options.regionLineYScaling
                                             + options.regionHeight * options.regionLineYScaling + 200).toString());
         toucanjsSVG.setAttribute('width', (options.longestRegionSize * options.regionLineXScaling + 400).toString());
-        title.setAttributeNS(null, 'x', ((options.longestRegionSize * options.regionLineXScaling + 400) / 2).toString());
+
+        /* Set and center title. */
+        setTitle(options.titleText);
     }
 
     reset();
