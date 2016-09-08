@@ -18,6 +18,8 @@ function ToucanJs() {
         gffFeatures = [];
 
         options.seqIDToRegionSize = {};
+        options.featureNames = new Set();
+        options.featureNamesToBase64 = {};
         options.featureNamesToColors = {};
         options.attributeNameID = 'Name';
         options.regionLineXScaling = 1.0;
@@ -30,6 +32,10 @@ function ToucanJs() {
 
         options.backgroundColor = 'white';
         options.titleText = 'TOUCANJS';
+
+        options.featureColorsSheet = null;
+        options.fillOpacity = 0.3;
+        options.fillOpacityOnHover = 0.9;
     }
 
 
@@ -237,9 +243,98 @@ function ToucanJs() {
     }
 
 
-    function drawSVG() {
-        var numberOfUniqueFeatures = 0;
+    function setFeatureLegend() {
+        /* Set feature legend. */
 
+        /* Create a new (or replace the old one) CSS style sheet. */
+        options.featureColorsSheet = (function() {
+            var featureColorsStyleOld = document.getElementById('feature_colors_style');
+
+            /* Create the <style> tag. */
+            var featureColorsStyle = document.createElement('style');
+            featureColorsStyle.setAttribute('id', 'feature_colors_style');
+
+            if (featureColorsStyleOld === null) {
+                /* Add the <style> element to the page. */
+                document.head.appendChild(featureColorsStyle);
+            } else {
+                /* Replace the old <style> element with the new one. */
+                document.head.replaceChild(featureColorsStyle, featureColorsStyleOld)
+            }
+
+            return featureColorsStyle.sheet;
+        })();
+
+        /* Generate random colors for each feature. */
+        var randomColorsForFeatures = randomColor({luminosity: 'dark', count: options.featureNames.size});
+        var colorIdx = 0;
+
+        /* Get the old featureIDsul if it exist. */
+        var featureIDsulOld = document.getElementById('feature_ids_ul');
+
+        /* Create a new featureIDsul. */
+        var featureIDsul = document.createElement('ul');
+        featureIDsul.setAttribute('id', 'feature_ids_ul');
+
+        /* Loop over all unique feature names in the order that they are added. */
+        for (let featureName of options.featureNames.keys()) {
+            /* Encode featureName in Base64 and remove "=" at the end if necessary,
+             * so it can be used as a CSS class name.
+             */
+            var featureNameBase64 = btoa(featureName).replace(/=+$/g, '');
+
+            if (! (featureName in options.featureNamesToColors)) {
+                /* Assign a random color if this feature does not have a color assigned yet. */
+                options.featureNamesToColors[featureName] = randomColorsForFeatures[colorIdx];
+
+                /* Store mapping of feature name to base64 encoded version. */
+                options.featureNamesToBase64[featureName] = featureNameBase64;
+            }
+
+            /* Insert new CSS rule for feature so the color for this feature can be changed easily everywhere
+             * by changing the CSS rule.
+             */
+            options.featureColorsSheet.insertRule(
+                '.' + featureNameBase64 + ' { color: ' + options.featureNamesToColors[featureName] +
+                '; fill: ' + options.featureNamesToColors[featureName] +
+                '; stroke: ' + options.featureNamesToColors[featureName] +
+                '; fill-opacity: ' + options.fillOpacity + '; }',
+                options.featureColorsSheet.cssRules.length);
+
+            /* Create a html5 color input type. */
+            var featureIDColorInput = document.createElement('input');
+            featureIDColorInput.setAttribute('type', 'color');
+            featureIDColorInput.setAttribute('value', options.featureNamesToColors[featureName]);
+
+            /* Change color of this feature when a new color is chosen in the html5 color input. */
+            featureIDColorInput.addEventListener('change', changeFeatureColors.bind(null, featureIDColorInput, colorIdx), false);
+            /* Make all instances of this feature less transparant on hovering over the html5 color input for this feature. */
+            featureIDColorInput.addEventListener('mouseover', changeFeatureFillOpacity.bind(null, options.fillOpacityOnHover, colorIdx), false);
+            featureIDColorInput.addEventListener('mouseout', changeFeatureFillOpacity.bind(null, options.fillOpacity, colorIdx), false);
+
+            /* Create a li element for the html5 color input type and feature name. */
+            var featureIDli = document.createElement('li');
+            featureIDli.setAttribute('class', featureNameBase64);
+            featureIDli.appendChild(featureIDColorInput);
+            var featureIDliText = document.createTextNode(featureName);
+            featureIDli.appendChild(featureIDliText);
+
+            featureIDsul.appendChild(featureIDli);
+
+            colorIdx += 1;
+        }
+
+        if (featureIDsulOld === null) {
+            /* Add featureIDsul, if there was not featureIDsul before. */
+            featureIDsdiv.appendChild(featureIDsul);
+        } else {
+            /* Replace old featureIDsul, with new one. */
+            featureIDsdiv.replaceChild(featureIDsul, featureIDsulOld);
+        }
+    }
+
+
+    function drawSVG() {
         gffFeatures.forEach(function (gffFeature) {
             var currentRegionSize = 0;
             if ('regionGenomicStart' in gffFeature && 'regionGenomicEnd' in gffFeature) {
@@ -257,8 +352,7 @@ function ToucanJs() {
             }
 
             if (! (gffFeature.attributes[options.attributeNameID] in options.featureNamesToColors)) {
-                options.featureNamesToColors[gffFeature.attributes[options.attributeNameID]] = 'gray';
-                numberOfUniqueFeatures += 1;
+                options.featureNames.add(gffFeature.attributes[options.attributeNameID]);
             }
         });
 
@@ -271,32 +365,8 @@ function ToucanJs() {
         /* Set axis tick spacing. */
         setAxisTicksSpacing(options.axisTicksSpacing);
 
-        var randomColorsForFeatures = randomColor({luminosity: 'dark', count: numberOfUniqueFeatures});
-        var colorIdx = 0;
-
-        var featureIDsul = document.createElement('ul');
-        featureIDsdiv.appendChild(featureIDsul);
-
-        for (var featureName in options.featureNamesToColors) {
-            options.featureNamesToColors[featureName] = randomColorsForFeatures[colorIdx];
-
-            var featureIDli = document.createElement('li');
-            featureIDli.setAttribute('class', 'item');
-            featureIDli.style.color = randomColorsForFeatures[colorIdx];
-
-            var featureIDColorButton = document.createElement('button');
-            var picker = new jscolor(featureIDColorButton);
-            featureIDColorButton.innerHTML = '&nbsp;';
-            picker.valueElement = null;
-            picker.fromString(randomColorsForFeatures[colorIdx].substr(1));
-
-            featureIDli.appendChild(featureIDColorButton);
-            var featureIDliText = document.createTextNode(featureName);
-            featureIDli.appendChild(featureIDliText);
-
-            featureIDsul.appendChild(featureIDli);
-            colorIdx += 1;
-        }
+        /* Set feature legend. */
+        setFeatureLegend();
 
         gffFeatures.forEach(function (gffFeature) {
             var regionGroupID = 'region__' + gffFeature.seqID;
@@ -386,6 +456,7 @@ function ToucanJs() {
                 toucanjsSVGDefs.appendChild(featureCoordAndSizeDefClipPath);
             }
 
+            feature.setAttributeNS(null, 'class', options.featureNamesToBase64[gffFeature.attributes[options.attributeNameID]]);
             feature.setAttributeNS(null, 'x', featureCoordAndSize.x);
             feature.setAttributeNS(null, 'y', featureCoordAndSize.y);
             feature.setAttributeNS(null, 'height', featureCoordAndSize.height);
@@ -395,8 +466,6 @@ function ToucanJs() {
             if (! (gffFeature.attributes[options.attributeNameID] in options.featureNamesToColors)) {
                 options.featureNamesToColors[gffFeature.attributes[options.attributeNameID]] = randomColor({luminosity: 'dark'});
             }
-            feature.setAttributeNS(null, 'fill', options.featureNamesToColors[gffFeature.attributes[options.attributeNameID]]);
-            feature.setAttributeNS(null, 'stroke', options.featureNamesToColors[gffFeature.attributes[options.attributeNameID]]);
 
             var featureTooltip = document.createElementNS(svgNS, 'title');
             var featureTooltipData = document.createTextNode(options.attributeNameID + ': ' + gffFeature.attributes[options.attributeNameID]);
@@ -429,8 +498,23 @@ function ToucanJs() {
         toucanjsSVG.setAttribute('height', (options.regionCount * options.regionHeight * options.regionLineYScaling
                                             + options.regionHeight * options.regionLineYScaling + 200).toString());
         toucanjsSVG.setAttribute('width', (options.longestRegionSize * options.regionLineXScaling + 400).toString());
-
     }
+
+
+    function changeFeatureColors(featureIDColorInput, CSSRuleIdx) {
+        /* Change the color, fill ans stroke (color) value of a certain CSS rule to the value set by color input type. */
+        var colorValue = featureIDColorInput.value;
+        options.featureColorsSheet.cssRules[CSSRuleIdx].style.color = colorValue;
+        options.featureColorsSheet.cssRules[CSSRuleIdx].style.fill = colorValue;
+        options.featureColorsSheet.cssRules[CSSRuleIdx].style.stroke = colorValue;
+    }
+
+
+    function changeFeatureFillOpacity(fillOpacity, CSSRuleIdx) {
+        /* Change the fill-opacity value of a certain CSS rule. */
+        options.featureColorsSheet.cssRules[CSSRuleIdx].style['fill-opacity'] = fillOpacity.toString();
+    }
+
 
     reset();
 

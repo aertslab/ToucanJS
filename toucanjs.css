@@ -33,6 +33,14 @@ h1 {
 
 #feature_ids ul li {
     list-style-type: none;
+    display: inline-block;
+    width: 400px;
+    padding: 5px;
+    margin: 2px 0px;
+}
+
+#feature_ids ul li input {
+    margin-right: 10px;
 }
 
 #svg {
