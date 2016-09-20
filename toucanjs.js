@@ -84,8 +84,8 @@ function ToucanJs() {
 
         if (re_chrom_pos_from_seqID_match !== null) {
             this.regionGenomicChrom = re_chrom_pos_from_seqID_match[1];
-            this.regionGenomicStart = re_chrom_pos_from_seqID_match[2];
-            this.regionGenomicEnd = re_chrom_pos_from_seqID_match[3];
+            this.regionGenomicStart = parseInt(re_chrom_pos_from_seqID_match[2]);
+            this.regionGenomicEnd = parseInt(re_chrom_pos_from_seqID_match[3]);
 
             this.genomicChrom = this.regionGenomicChrom;
             this.genomicStart = this.regionGenomicStart + this.relativeStart - 1;
