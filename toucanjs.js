@@ -21,7 +21,6 @@ function ToucanJs() {
         options.featureNames = new Set();
         options.featureNamesToBase64 = {};
         options.featureNamesToColors = {};
-        options.attributeNameID = 'Name';
         options.regionLineXScaling = 1.0;
         options.regionLineYScaling = 1.0;
         options.featureScoreScaling = 1.0;
@@ -71,11 +70,27 @@ function ToucanJs() {
         this.phase = phase;
 
         var attributes = {};
+        var featureIdIsSet = false;
 
-        attributesStr.split(';').forEach(function (attributeStr) {
-            var [attributeID, attributeValue] = attributeStr.split('=');
-            attributes[attributeID] = attributeValue;
-        });
+        /* The following regex should handle the following GFF attributes formats:
+         *   - key1 value1; key2 value2
+         *   - key1 "value1"; key2 "value2"
+         *   - key1=value1;key2=value2
+         *   - key1="value1"; key2="value2"
+         *   - key1="value1"; key2="value2"
+         */
+        var attributesRegEx = /(\w+)[ =]+["]?([^";]+)["]?[;]?/g;
+
+        while (attributeMatches = attributesRegEx.exec(attributesStr)) {
+            /* Add each GFF attribute key and value to the attributes dictionary. */
+            attributes[attributeMatches[1]] = attributeMatches[2];
+
+            if (! featureIdIsSet) {
+                /* Set feature ID to the value of the first GFF attribute. */
+                this.featureId = attributeMatches[2];
+                featureIdIsSet = true;
+            }
+        }
 
         this.attributes = attributes;
 
@@ -351,8 +366,8 @@ function ToucanJs() {
                 options.seqIDToRegionSize[gffFeature.seqID] = Math.max(options.seqIDToRegionSize[gffFeature.seqID], currentRegionSize);
             }
 
-            if (! (gffFeature.attributes[options.attributeNameID] in options.featureNamesToColors)) {
-                options.featureNames.add(gffFeature.attributes[options.attributeNameID]);
+            if (! (gffFeature.featureId in options.featureNamesToColors)) {
+                options.featureNames.add(gffFeature.featureId);
             }
         });
 
@@ -456,19 +471,19 @@ function ToucanJs() {
                 toucanjsSVGDefs.appendChild(featureCoordAndSizeDefClipPath);
             }
 
-            feature.setAttributeNS(null, 'class', options.featureNamesToBase64[gffFeature.attributes[options.attributeNameID]]);
+            feature.setAttributeNS(null, 'class', options.featureNamesToBase64[gffFeature.featureId]);
             feature.setAttributeNS(null, 'x', featureCoordAndSize.x);
             feature.setAttributeNS(null, 'y', featureCoordAndSize.y);
             feature.setAttributeNS(null, 'height', featureCoordAndSize.height);
             feature.setAttributeNS(null, 'width', featureCoordAndSize.width);
             feature.setAttributeNS(null, 'clip-path', 'url(#' + featureCoordAndSizeDefID + ')');
 
-            if (! (gffFeature.attributes[options.attributeNameID] in options.featureNamesToColors)) {
-                options.featureNamesToColors[gffFeature.attributes[options.attributeNameID]] = randomColor({luminosity: 'dark'});
+            if (! (gffFeature.featureId in options.featureNamesToColors)) {
+                options.featureNamesToColors[gffFeature.featureId] = randomColor({luminosity: 'dark'});
             }
 
             var featureTooltip = document.createElementNS(svgNS, 'title');
-            var featureTooltipData = document.createTextNode(options.attributeNameID + ': ' + gffFeature.attributes[options.attributeNameID]);
+            var featureTooltipData = document.createTextNode('Feature ID: ' + gffFeature.featureId);
             featureTooltipData.nodeValue += '\nScore: ' + gffFeature.score.toString();
             featureTooltipData.nodeValue += '\nRelative start: ' + gffFeature.relativeStart.toString();
             featureTooltipData.nodeValue += '\nRelative end: ' + gffFeature.relativeEnd.toString();
@@ -484,9 +499,7 @@ function ToucanJs() {
             featureTooltipData.nodeValue += '\nFeature type: ' + gffFeature.featureType;
 
             for (var attributeID in gffFeature.attributes) {
-                if (attributeID !== options.attributeNameID) {
-                    featureTooltipData.nodeValue += '\n' + attributeID + ': ' + gffFeature.attributes[attributeID];
-                }
+                featureTooltipData.nodeValue += '\n' + attributeID + ': ' + gffFeature.attributes[attributeID];
             }
 
             featureTooltip.appendChild(featureTooltipData);
