@@ -47,11 +47,31 @@ h1 {
     overflow-x: auto;
 }
 
-#toucanjs_svg {
+.toucanjs_svg {
     display: block;
     margin: 20px auto;
     border: solid 2px;
 }
 
+.toucanjs_svg g g rect:hover
+{
+    fill-opacity: 0.9;
+    stroke-opacity: 1.0;
+    stroke-width: 1;
+}
+
+.toucanjs_svg g g rect
+{
+    fill-opacity: 0.3;
+    stroke-opacity: 1.0;
+    stroke-width: 1;
+}
+
+.toucanjs_svg g g rect.region_line
+{
+    fill-opacity: 0.9;
+    stroke-opacity: 1.0;
+    stroke-width: 0;
+}
 
 button {margin-right: 5px}

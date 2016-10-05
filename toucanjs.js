@@ -6,16 +6,36 @@
 function ToucanJs() {
 
     var svgNS = 'http://www.w3.org/2000/svg';
-    var toucanjsSVG = document.getElementById('toucanjs_svg');
-    var toucanjsSVGDefs = document.getElementsByTagNameNS(svgNS, 'defs')[0];
+    var svgdev = document.getElementById('svg');
     var featureIDsdiv = document.getElementById('feature_ids');
+
+    var toucanjsSVGandSVGDefs = createToucanJsSVG();
+    var toucanjsSVG = toucanjsSVGandSVGDefs.toucanjsSVG;
+    var toucanjsSVGDefs = toucanjsSVGandSVGDefs.toucanjsSVGDefs;
+    svgdev.appendChild(toucanjsSVG);
 
     var gffFeatures = [];
 
     var options = {};
 
+    function createToucanJsSVG() {
+        var toucanjsSVG = document.createElementNS(svgNS, 'svg');
+        toucanjsSVG.setAttribute('class', 'toucanjs_svg');
+        toucanjsSVG.setAttribute('version', '1.1');
+        toucanjsSVG.setAttribute('baseProfile', 'full');
+        toucanjsSVG.setAttribute('width', '800');
+        toucanjsSVG.setAttribute('height', '600');
+
+        var toucanjsSVGDefs = document.createElementNS(svgNS, 'defs');
+        toucanjsSVG.appendChild(toucanjsSVGDefs);
+
+        return {'toucanjsSVG' : toucanjsSVG, 'toucanjsSVGDefs': toucanjsSVGDefs};
+    }
+
     function reset() {
         gffFeatures = [];
+
+        options = {};
 
         options.seqIDToRegionSize = {};
         options.featureNames = new Set();
@@ -35,6 +55,13 @@ function ToucanJs() {
         options.featureColorsSheet = null;
         options.fillOpacity = 0.3;
         options.fillOpacityOnHover = 0.9;
+
+        /* Replace old toucanjsSVG, with new one. */
+        var toucanjsSVGOld = toucanjsSVG;
+        var toucanjsSVGandSVGDefs = createToucanJsSVG();
+        toucanjsSVG = toucanjsSVGandSVGDefs.toucanjsSVG;
+        toucanjsSVGDefs = toucanjsSVGandSVGDefs.toucanjsSVGDefs;
+        svgdev.replaceChild(toucanjsSVG, toucanjsSVGOld);
     }
 
 
@@ -324,8 +351,8 @@ function ToucanJs() {
             /* Change color of this feature when a new color is chosen in the html5 color input. */
             featureIDColorInput.addEventListener('change', changeFeatureColors.bind(null, featureIDColorInput, colorIdx), false);
             /* Make all instances of this feature less transparant on hovering over the html5 color input for this feature. */
-            featureIDColorInput.addEventListener('mouseover', changeFeatureFillOpacity.bind(null, options.fillOpacityOnHover, colorIdx), false);
-            featureIDColorInput.addEventListener('mouseout', changeFeatureFillOpacity.bind(null, options.fillOpacity, colorIdx), false);
+            featureIDColorInput.addEventListener('mouseover', changeFeatureFillOpacity.bind(null, options.fillOpacityOnHover, colorIdx, true), false);
+            featureIDColorInput.addEventListener('mouseout', changeFeatureFillOpacity.bind(null, options.fillOpacity, colorIdx, false), false);
 
             /* Create a li element for the html5 color input type and feature name. */
             var featureIDli = document.createElement('li');
@@ -523,9 +550,14 @@ function ToucanJs() {
     }
 
 
-    function changeFeatureFillOpacity(fillOpacity, CSSRuleIdx) {
+    function changeFeatureFillOpacity(fillOpacity, CSSRuleIdx, important) {
         /* Change the fill-opacity value of a certain CSS rule. */
-        options.featureColorsSheet.cssRules[CSSRuleIdx].style['fill-opacity'] = fillOpacity.toString();
+        if (important) {
+            /* Add the "!important" declaration to override more specific CSS rule. */
+            options.featureColorsSheet.cssRules[CSSRuleIdx].style.setProperty('fill-opacity', fillOpacity.toString(), 'important');
+        } else {
+            options.featureColorsSheet.cssRules[CSSRuleIdx].style.setProperty('fill-opacity', fillOpacity.toString());
+        }
     }
 
 
