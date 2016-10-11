@@ -23,8 +23,9 @@ function ToucanJs() {
         toucanjsSVG.setAttribute('class', 'toucanjs_svg');
         toucanjsSVG.setAttribute('version', '1.1');
         toucanjsSVG.setAttribute('baseProfile', 'full');
-        toucanjsSVG.setAttribute('width', '800');
-        toucanjsSVG.setAttribute('height', '600');
+        toucanjsSVG.setAttribute('width', '98%');
+        toucanjsSVG.setAttribute('height', '100%');
+        toucanjsSVG.setAttribute('viewBox', '0 0 800 600');
 
         var toucanjsSVGDefs = document.createElementNS(svgNS, 'defs');
         toucanjsSVG.appendChild(toucanjsSVGDefs);
@@ -538,9 +539,11 @@ function ToucanJs() {
             regionLineGroup.appendChild(feature);
         });
 
-        toucanjsSVG.setAttribute('height', (options.regionCount * options.regionHeight * options.regionLineYScaling
-                                            + options.regionHeight * options.regionLineYScaling + 200).toString());
-        toucanjsSVG.setAttribute('width', (options.longestRegionSize * options.regionLineXScaling + 400).toString());
+        /* Update the size of the SVG viewBox. */
+        var svgHeight = (options.regionCount * options.regionHeight * options.regionLineYScaling
+                         + options.regionHeight * options.regionLineYScaling + 200).toString();
+        var svgWidth = (options.longestRegionSize * options.regionLineXScaling + 400).toString();
+        toucanjsSVG.setAttribute('viewBox', '0 0 ' + svgWidth + ' ' + svgHeight);
     }
 
 
