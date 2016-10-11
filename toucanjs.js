@@ -422,6 +422,7 @@ function ToucanJs() {
             if (regionGroup === null) {
                 options.regionCount += 1;
 
+                /* Create a group element to group all elements for a region together (region name and content). */
                 regionGroup = document.createElementNS(svgNS, 'g');
 
                 regionGroup.setAttributeNS(null, 'id', regionGroupID);
@@ -438,12 +439,14 @@ function ToucanJs() {
 
                 regionGroup.appendChild(regionName);
 
+                /* Create a group element to group all elements for the region content together. */
                 regionLineGroup = document.createElementNS(svgNS, 'g');
 
                 regionLineGroup.setAttributeNS(null, 'id', regionLineGroupID);
                 regionLineGroup.setAttributeNS(null, 'transform',
                     'matrix(' + options.regionLineXScaling.toString() + ' 0  0 ' + options.regionLineYScaling.toString() + ' 300 0)');
 
+                /* Create a axis with ticks for the region. */
                 var regionTicksLine = document.createElementNS(svgNS, 'path');
                 regionTicksLine.setAttributeNS(null, 'fill', 'none');
                 regionTicksLine.setAttributeNS(null, 'stroke', 'gray');
