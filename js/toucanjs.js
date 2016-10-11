@@ -353,7 +353,7 @@ function ToucanJs() {
             featureIDColorInput.setAttribute('value', options.featureNamesToColors[featureName]);
 
             /* Change color of this feature when a new color is chosen in the html5 color input. */
-            featureIDColorInput.addEventListener('change', changeFeatureColors.bind(null, featureIDColorInput, colorIdx), false);
+            featureIDColorInput.addEventListener('change', changeFeatureColors.bind(null, featureIDColorInput, featureName, colorIdx), false);
             /* Make all instances of this feature less transparant on hovering over the html5 color input for this feature. */
             featureIDColorInput.addEventListener('mouseover', changeFeatureFillOpacity.bind(null, options.fillOpacityOnHover, colorIdx, true), false);
             featureIDColorInput.addEventListener('mouseout', changeFeatureFillOpacity.bind(null, options.fillOpacity, colorIdx, false), false);
@@ -550,12 +550,15 @@ function ToucanJs() {
     }
 
 
-    function changeFeatureColors(featureIDColorInput, CSSRuleIdx) {
+    function changeFeatureColors(featureIDColorInput, featureName, CSSRuleIdx) {
         /* Change the color, fill ans stroke (color) value of a certain CSS rule to the value set by color input type. */
         var colorValue = featureIDColorInput.value;
         options.featureColorsSheet.cssRules[CSSRuleIdx].style.color = colorValue;
         options.featureColorsSheet.cssRules[CSSRuleIdx].style.fill = colorValue;
         options.featureColorsSheet.cssRules[CSSRuleIdx].style.stroke = colorValue;
+
+        /* Update the color for the specified featureName. */
+        options.featureNamesToColors[featureName] = colorValue;
     }
 
 
