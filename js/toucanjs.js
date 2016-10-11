@@ -297,6 +297,9 @@ function ToucanJs() {
             var featureColorsStyle = document.createElement('style');
             featureColorsStyle.setAttribute('id', 'feature_colors_style');
 
+            /* WebKit hack. */
+            //featureColorsStyle.appendChild(document.createTextNode(""));
+
             if (featureColorsStyleOld === null) {
                 /* Add the <style> element to the page. */
                 document.head.appendChild(featureColorsStyle);
@@ -575,3 +578,38 @@ function ToucanJs() {
         'reset': reset
     }
 }
+
+// (function() {
+//     constructor: ToucanJs,
+//     this.getName = function() {
+//         return this.name;
+//     };
+//     this.getMessage = function() {
+//         return this.message;
+//     };
+//     //this.printb = printa;
+//     // this.readGFFFile2 = this.readGFFFile;
+//
+// }).call(ToucanJs.prototype);
+
+
+// GFFFeature.prototype = {
+//     constructor: GFFFeature,
+//     saveScore:function (theScoreToAdd)  {
+//         this.quizScores.push(theScoreToAdd)
+//     },
+//     showNameAndScores:function ()  {
+//         var scores = this.quizScores.length > 0 ? this.quizScores.join(",") : "No Scores Yet";
+//         return this.name + " Scores: " + scores;
+//     },
+//     changeEmail:function (newEmail)  {
+//         this.email = newEmail;
+//         return "New Email Saved: " + this.email;
+//     }
+//     changeEmail2:function (newEmail)  {
+//         this.email = newEmail;
+//         return "New Email Saved: " + this.email;
+//     }
+// }
+
+
