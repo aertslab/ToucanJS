@@ -8,9 +8,10 @@ module.exports = function (config) {
     plugins: [
       require('karma-jasmine'),
       require('karma-chrome-launcher'),
+      require('karma-firefox-launcher'),
       require('karma-remap-istanbul'),
       require('angular-cli/plugins/karma'),
-      require('karma-jenkins-reporter'),
+      require('karma-junit-reporter')
     ],
     files: [
       { pattern: './src/test.ts', watched: false }
@@ -31,15 +32,15 @@ module.exports = function (config) {
       config: './angular-cli.json',
       environment: 'dev'
     },
-    reporters: ['progress', 'jenkins'],
+    reporters: ['progress', 'junit'],
     port: 9876,
     colors: true,
     logLevel: config.LOG_INFO,
     autoWatch: true,
-    browsers: ['Chrome'],
+    browsers: ['Chrome', 'Firefox'],
     singleRun: true,
-    jenkinsReporter: {
-	outputFile: 'test-results.xml'
+    junitReporter: {
+        outputDir: 'tests'
     }
   });
 };
