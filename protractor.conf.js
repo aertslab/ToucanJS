@@ -3,6 +3,7 @@
 
 /*global jasmine */
 var SpecReporter = require('jasmine-spec-reporter');
+var reporters = require('jasmine-reporters');
 
 exports.config = {
   allScriptsTimeout: 11000,
@@ -28,5 +29,9 @@ exports.config = {
   },
   onPrepare: function() {
     jasmine.getEnv().addReporter(new SpecReporter());
+    jasmine.getEnv().addReporter(new reporters.JUnitXmlReporter({
+	savePath: 'tests/',
+	consolidateAll: false
+    }));
   }
 };

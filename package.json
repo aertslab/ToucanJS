@@ -33,6 +33,7 @@
     "angular-cli": "1.0.0-beta.28.3",
     "codelyzer": "~2.0.0-beta.1",
     "jasmine-core": "2.5.2",
+    "jasmine-reporters": "^2.2.0",
     "jasmine-spec-reporter": "2.5.0",
     "karma": "1.2.0",
     "karma-chrome-launcher": "^2.0.0",
