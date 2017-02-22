@@ -2,7 +2,7 @@ import { browser, element, by } from 'protractor';
 
 export class ToucanJSPage {
   navigateTo() {
-    return browser.get('/');
+    return browser.get(browser.baseUrl + '/');
   }
 
   getParagraphText() {
