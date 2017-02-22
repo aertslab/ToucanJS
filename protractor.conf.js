@@ -13,7 +13,7 @@ exports.config = {
     'browserName': 'firefox'
   },
   directConnect: true,
-  baseUrl: 'http://localhost:4200/',
+  baseUrl: 'http://test_user:b!t$w3b!t3$t@localhost:8888/toucanJS/',
   framework: 'jasmine',
   jasmineNodeOpts: {
     showColors: true,
