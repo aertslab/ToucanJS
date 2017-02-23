@@ -2,6 +2,21 @@
 
 This project was generated with [angular-cli](https://github.com/angular/angular-cli) version 1.0.0-beta.28.3.
 
+You have to have **git**, **node.js**, **npm**, **angular-cli**, **karma** and **protractor** installed on your system.
+
+
+## Cloning
+
+Run `git clone ssh://git@dev.bits.vib.be:8822/lkreft/toucan.js.git` to have your own copy of the code.
+
+## Branches
+
+* **master** - always stable, latest release
+* **legacy** - old code, no longer used
+* **dev/master** - release candidate, fork it to create your own development branch
+
+All development should happen on feature branches. Run `git checkout -b dev/featurename` to create your own branch.
+
 ## Development server
 Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The app will automatically reload if you change any of the source files.
 
@@ -22,10 +37,14 @@ Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.
 Run `ng e2e` to execute the end-to-end tests via [Protractor](http://www.protractortest.org/).
 Before running the tests make sure you are serving the app via `ng serve`.
 
-## Deploying to GitHub Pages
+## Push your changes to GitLab
 
-Run `ng github-pages:deploy` to deploy to GitHub Pages.
+Do not forget to include Karma and/or Protractor test specs for new features.
+Merge your branch with **dev/master** and run tests again!
 
-## Further help
+Push back the merged **dev/master** branch back to GitLab. It will trigger a Jenkins build.
 
-To get more help on the `angular-cli` use `ng help` or go check out the [Angular-CLI README](https://github.com/angular/angular-cli/blob/master/README.md).
+## Check Jenkins build
+
+Each push to **dev/master** triggers a build of [toucanJS job](http://dev.bits.vib.be:4884/job/toucanJS/).
+Check the latest build and the test results. Fix the errors you have introduced!
