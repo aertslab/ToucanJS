@@ -3,9 +3,10 @@ const express = require('express');
 const path = require('path');
 const http = require('http');
 const bodyParser = require('body-parser');
+var childProcess = require('child_process');
 
 // Get our API routes
-const api = require('./server/routes/api');
+const api = require('./routes/api');
 
 const app = express();
 
@@ -14,14 +15,14 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 
 // Point static path to dist
-app.use(express.static(path.join(__dirname, 'dist')));
+app.use(express.static(path.join(__dirname, '../dist/client')));
 
 // Set our api routes
 app.use('/api', api);
 
 // Catch all other routes and return the index file
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'dist/index.html'));
+    res.sendFile(path.join(__dirname, '../dist/client/index.html'));
 });
 
 /**
@@ -39,3 +40,4 @@ const server = http.createServer(app);
  * Listen on provided port, on all network interfaces.
  */
 server.listen(port, () => console.log(`API running on localhost:${port}`));
+childProcess.exec('chrome --kiosk http://localhost:4200');

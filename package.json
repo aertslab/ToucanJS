@@ -1,15 +1,21 @@
 {
   "name": "toucan-js",
+  "main": "http://localhost:4200",
+  "node-main": "dist/server/nwdist.js",
   "version": "0.0.0",
   "license": "MIT",
   "angular-cli": {},
   "scripts": {
     "ng": "ng",
-    "start": "ng build && node server.js",
-    "test": "ng test",
+    "buildClient": "ng build",
+    "buildServer": "enclose -c enclose.conf.js -o dist/toucanJS.exe server/main.js",
+    "build": "npm run buildClient && npm run buildServer",
+    "start": "ng build && node server/main.js",
+    "karma": "karma start",
     "pree2e": "webdriver-manager update --standalone false --gecko false",
     "e2e": "protractor",
-    "jasmine": "node server/test.js"
+    "jasmine": "nodenpm server/test.js",
+    "test": "npm run jasmine && npm run karma && npm run e2e"
   },
   "private": true,
   "dependencies": {
@@ -21,9 +27,11 @@
     "@angular/platform-browser": "^2.3.1",
     "@angular/platform-browser-dynamic": "^2.3.1",
     "@angular/router": "^3.3.1",
+    "@ngtools/webpack": "^1.2.10",
     "body-parser": "^1.16.1",
     "core-js": "^2.4.1",
     "express": "^4.14.1",
+    "open": "0.0.5",
     "rxjs": "^5.0.1",
     "ts-helpers": "^1.1.1",
     "zone.js": "^0.7.2"
@@ -31,11 +39,11 @@
   "devDependencies": {
     "@angular/cli": "^1.0.0-beta.32.3",
     "@angular/compiler-cli": "^2.3.1",
-    "@types/jasmine": "2.5.38",
+    "@types/jasmine": "^2.5.38",
     "@types/node": "^6.0.42",
-    "angular-cli": "1.0.0-beta.28.3",
     "body-parser": "^1.16.1",
     "codelyzer": "~2.0.0-beta.1",
+    "enclose": "^2.2.0",
     "express": "^4.14.1",
     "jasmine": "^2.5.3",
     "jasmine-core": "2.5.2",
