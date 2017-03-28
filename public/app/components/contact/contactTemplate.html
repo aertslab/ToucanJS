@@ -1,0 +1,51 @@
+<div class="panel panel-default">
+	<div class="panel-body">
+		<form class="form-horizontal" name="contactForm" data-ng-submit="contact.submitContactForm()" data-ng-show="contact.showForm">
+		<h4>Fill this form if you have any questions or suggestions. All fields are required.</h4>
+			<fieldset>
+				<div class="form-group has-error">
+					<label for="inputName" class="col-md-2 control-label">Name</label>
+					<div class="col-md-10">
+						<input type="text" class="form-control" id="inputName" placeholder="Your name" data-ng-model="contact.form.name" required maxlength="50">
+					</div>
+				</div>
+				<div class="form-group has-error">
+					<label for="inputEmail" class="col-md-2 control-label">Email</label>
+					<div class="col-md-10">
+						<input type="email" class="form-control" id="inputEmail" placeholder="Your email" data-ng-model="contact.form.email" required maxlength="50">
+					</div>
+				</div>		
+				<div class="form-group has-error">
+					<label for="inputSubject" class="col-md-2 control-label">Subject</label>
+					<div class="col-md-10">
+						<input type="text" class="form-control" id="inputSubject" placeholder="Subject" data-ng-model="contact.form.subject" required maxlength="90">
+					</div>
+				</div>
+				<div class="form-group has-error">
+					<label for="textArea" class="col-md-2 control-label">Message</label>
+					<div class="col-md-10">
+						<textarea class="form-control" rows="3" id="textArea" data-ng-model="contact.form.message" required maxlength="255"></textarea>
+						<span class="help-block">Maximum allowed characters: 255. Characters left {{255 - contact.form.message.length}}.</span>
+					</div>
+				</div>
+				<br />
+				<div class="col-md-12 text-center">
+					<div data-vc-recaptcha
+						class="recaptcha" 						
+						theme="contact.captcha.theme" 
+						key="contact.captcha.key" 
+						data-ng-model="contact.captcha.response">
+                	</div>
+                	<br />
+                	<span data-ng-hide="contact.captcha.response" class="red">Please use reCAPTCHA to identify yourself</span>
+					<br />
+					<button class="btn btn-default" type="submit" data-ng-disabled="!contact.captcha.response">Send</button>
+				</div>				
+			</fieldset>
+		</form>
+		<div class="col-xs-12 text-center" data-ng-show="contact.showMessage">
+			{{contact.submitMessage}}<br />
+			<button class="btn btn-default" data-ng-show="submitted" data-ng-click="contact.showContactForm()"><b>Show contact form</b></button>
+		</div>
+	</div>
+</div>

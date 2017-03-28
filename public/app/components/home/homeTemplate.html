@@ -1,0 +1,239 @@
+<style>
+</style>
+<div class="navbar navbar-default">
+    <div class="container-fluid">
+        <div class="navbar-header">
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-warning-collapse">
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="javascript:void(0)">ToucanJS</a>
+        </div>
+        <div class="navbar-collapse collapse navbar-warning-collapse">
+            <ul class="nav navbar-nav navbar-right">
+                <li><a class="pointer" data-toggle="modal" data-target="#uploadModal">Upload</a></li>
+                <li><a class="pointer" data-toggle="offcanvas" data-target="#featuresOffcanvas">Features</a></li>
+                <li><a class="pointer" data-toggle="offcanvas" data-target="#filesOffcanvas">Files</a></li>
+                <li><a class="pointer" data-toggle="offcanvas" data-target="#optionsOffcanvas">Options</a></li>
+                <li><a class="pointer" ng-click="home.clearWorkspace()">Clear</a></li>
+                <li><a class="pointer" data-toggle="modal" data-target="#aboutModal">About</a></li>
+                <!--
+                <li class="dropdown">
+                    <a href="bootstrap-elements.html" data-target="#" class="dropdown-toggle pointer" data-toggle="dropdown">Menu <b class="caret"></b></a>
+                    <ul class="dropdown-menu">
+                        <li class="divider"></li>
+                    </ul>
+                </li>
+                -->
+            </ul>
+        </div>
+    </div>
+</div>
+<div class="offcanvas-wrapper">
+    <div class="col-md-12">
+        <div class="panel panel-primary">
+            <div class="panel-body" id="homePanel">
+                <div class="text-center">
+                    <span ng-if="workspace.loading">
+                        <span id="spinLoading" class="spin">Loading</span> your workspace
+                    </span>
+                    <span ng-if="!workspace.loading && workspace.features.length == 0">
+                        Your workspace is empty. Please upload a file.
+                    </span>
+                    <span ng-if="!workspace.loading && workspace.features.length != 0">
+                        Loaded {{workspace.features.length}} features from {{workspace.files.length}} files
+                    </span>
+                </div>
+                <visualization ng-show="workspace.features.length != 0" options="workspace.options" size="workspace.longestRegionSize"
+                               feature-colors="workspace.featureColors" features="workspace.features" sequences="workspace.sequences">
+                </visualization>
+            </div>
+        </div>
+    </div>
+    <offcanvas id="featuresOffcanvas">
+        <div class="panel panel-primary">
+            <div class="panel-body">
+                <h5><b>Features</b></h5>
+                <span ng-repeat="feature in workspace.uniqueFeatures | orderBy" style="color: {{workspace.featureColors[feature]}}">
+                    <a id="color-{{feature}}" class="featureColor pointer" title="Color this feature" ng-click="home.colorFeature(feature)">
+                        <i class="material-icons">invert_colors</i>
+                    </a>
+                    {{feature}}
+                    <br />
+                </span>
+                <span ng-if="workspace.features.length == 0">No features loaded</span>
+            </div>
+        </div>
+    </offcanvas>
+    <offcanvas id="filesOffcanvas">
+        <div class="panel panel-primary">
+            <div class="panel-body">
+                <h5><b>Files</b></h5>
+                <span ng-repeat="file in workspace.files"><a class="pointer" title="Remove this file" ng-click="home.removeFile(file.id)"><i class="material-icons">remove_circle</i></a>{{file.name}}<br /></span>
+                <a class="pointer" title="Upload new file" data-toggle="modal" data-target="#uploadModal"><i class="material-icons">add_circle</i>upload new file</a>
+            </div>
+        </div>
+    </offcanvas>
+    <offcanvas id="optionsOffcanvas">
+        <div class="panel panel-primary">
+            <div class="panel-body">
+                <h5><b>Options</b></h5>
+                <form class="form-horizontal text-right">
+                    <fieldset>
+                        <div class="form-group">
+                            <label class="col-sm-8 control-label">Visualization height</label>
+                            <div class="col-sm-4">
+                                <input type="number" min="0" class="form-control" ng-model='workspace.options.height' />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-8 control-label">Visualization margin</label>
+                            <div class="col-sm-4">
+                                <input type="number" min="0" class="form-control" ng-model='workspace.options.margin' />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-8 control-label">Context height</label>
+                            <div class="col-sm-4">
+                                <input type="number" min="0" class="form-control" ng-model='workspace.options.contextHeight' />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-8 control-label">Sequence name width</label>
+                            <div class="col-sm-4">
+                                <input type="number" min="0" class="form-control" ng-model='workspace.options.sequenceMargin' />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-8 control-label">Scale ticks</label>
+                            <div class="col-sm-4">
+                                <input type="number" min="0" class="form-control" ng-model='workspace.options.numberOfTicks' />
+                            </div>
+                        </div>
+                        <!--
+                        <div class="form-group">
+                            <label class="col-sm-8 control-label">Scale stroke pattern</label>
+                            <div class="col-sm-4">
+                                <input type="text" class="form-control" ng-model='workspace.options.axisStrokeArray' />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-8 control-label">Scale stroke color</label>
+                            <div class="col-sm-4">
+                                <input type="text" class="form-control" ng-model='workspace.options.axisStrokeColor' />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-8 control-label">Sequence line color</label>
+                            <div class="col-sm-4">
+                                <input type="text" class="form-control" ng-model='workspace.options.sequenceColor' />
+                            </div>
+                        </div>
+                        -->
+                        <div class="form-group">
+                            <label class="col-sm-8 control-label">Sequence line width</label>
+                            <div class="col-sm-4">
+                                <input type="number" min="0" class="form-control" ng-model='workspace.options.sequenceWidth' />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-8 control-label">Feature height</label>
+                            <div class="col-sm-4">
+                                <input type="number" min="0" class="form-control" ng-model='workspace.options.featureHeight' />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-8 control-label">Feature fill opacity</label>
+                            <div class="col-sm-4">
+                                <input type="number" step="0.1" min="0" max="1" class="form-control" ng-model='workspace.options.featureFillOpacity' />
+                            </div>
+                        </div>
+                        <!--
+                        <div class="form-group">
+                            <label class="col-sm-8 control-label">Feature stroke color</label>
+                            <div class="col-sm-4">
+                                <input type="text" class="form-control" ng-model='workspace.options.featureStrokeColor' />
+                            </div>
+                        </div>
+                        -->
+                        <div class="form-group">
+                            <label class="col-sm-8 control-label">Feature stroke width</label>
+                            <div class="col-sm-4">
+                                <input type="number" min="0" step="0.1" class="form-control" ng-model='workspace.options.featureStrokeWidth' />
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-8 control-label">Feature stroke opacity</label>
+                            <div class="col-sm-4">
+                                <input type="number" step="0.1" min="0" max="1" class="form-control" ng-model='workspace.options.featureStrokeOpacity' />
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-default" ng-click="home.resizeVisualization(); home.updateVisualization();">Apply</button>
+                    </fieldset>
+                </form>
+            </div>
+        </div>
+    </offcanvas>
+</div>
+<div class="modal fade" id="uploadModal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+        <h4 class="modal-title">Upload GFF file</h4>
+      </div>
+      <div class="modal-body">
+        <form class="form-horizontal" id="uploadForm">
+            <fieldset>
+                <div class="form-group">
+                    <label for="inputFile" class="col-md-2 control-label">File</label>
+                    <div class="col-md-10">
+                        <input type="text" readonly="" class="form-control" placeholder="Browse...">
+                        <input type="file" id="file" name="file">
+                    </div>
+                </div>
+            </fieldset>
+        </form>
+        {{message}}
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-default" ng-click="home.uploadFile()">Upload</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="aboutModal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+        <h4 class="modal-title">About ToucanJS</h4>
+      </div>
+      <div class="modal-body">
+      <h4>Description</h4>
+        TOUCAN is a workbench for regulatory sequence analysis on metazoan genomes: comparative genomics, detection of significant transcription factor binding sites, and detection of cis-regulatory modules (combinations of binding sites) in sets of coexpressed/coregulated genes. It is a platform independent, standalone Java application that is tightly linked with Ensembl, and was built using the BioJava package. SOAP web services are used to remotely access multiple algorithms for comparative genomics, motif detection, and module detection.
+        <h4>Documentation</h4>
+        The manual of older versions is <a href="http://gbiomed.kuleuven.be/apps/lcb/toucan/help/index.htm">here</a>.<br />
+        Herbert Mayer has evaluated TOUCAN for Bioinformatics World and has added some useful comments <a href="http://homepage.univie.ac.at/herbert.mayer/MainGEN.html#TOUCAN">here</a>.
+        <h4>References</h4>
+        <ul>
+            <li>
+                Stein Aerts, Gert Thijs, Bert Coessens, Mik Staes, Yves Moreau, Bart De Moor (2003)<br />
+                <a href="http://nar.oupjournals.org/cgi/content/abstract/31/6/1753">TOUCAN : Deciphering the Cis-Regulatory Logic of Coregulated Genes</a><br />
+                Nucl Acids Res, vol. 31, no. 6, 2003, pp. 1753-1764.<br />
+            </li>
+            <li>
+                Stein Aerts, Peter Van Loo, Gert Thijs, Herbert Mayer, Rainer de Martin, Yves Moreau and Bart De Moor (2005)<br />
+                <a href="http://nar.oxfordjournals.org/cgi/content/full/33/suppl_2/W393">TOUCAN 2: the all-inclusive open source workbench for regulatory sequence analysis</a><br />
+                Nucl Acids Res, vol. 33 (Web Server issue), W393-6.
+            </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="text/javascript">
+    $.material.init();
+</script>

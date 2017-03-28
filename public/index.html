@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="assets/libs/bootstrap/css/bootstrap.min.css" type="text/css">
+    <link rel="stylesheet" href="assets/libs/bootstrap-colorpicker/css/bootstrap-colorpicker.min.css"></script>
+    <link rel="stylesheet" href="assets/libs/bootstrap-material-design/css/bootstrap-material-design.min.css" type="text/css">
+    <link rel="stylesheet" href="assets/libs/bootstrap-material-design/css/ripples.min.css" type="text/css">
+    <link rel="stylesheet" href="assets/libs/animate/animate.css" type="text/css">
+    <link rel="stylesheet" href="assets/css/vib.css" type="text/css">
+    <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/icon?family=Material+Icons">
+    <script type="text/javascript" src="https://www.google.com/recaptcha/api.js?onload=vcRecaptchaApiLoaded&render=explicit"></script>
+    <script type="text/javascript" src="assets/libs/modernizr/modernizr.js"></script>
+    <script type="text/javascript" src="assets/libs/jquery/jquery.min.js"></script>
+    <script type="text/javascript" src="assets/libs/angularjs/angular.min.js"></script>
+    <script type="text/javascript" src="assets/libs/angularjs/angular-route.min.js"></script>
+    <script type="text/javascript" src="assets/libs/angularjs/angular-resource.min.js"></script>
+    <script type="text/javascript" src="assets/libs/angularjs/angular-scroll.min.js"></script>
+    <script type="text/javascript" src="assets/libs/angularjs/angular-recaptcha.min.js"></script>
+    <script type="text/javascript" src="assets/libs/angularjs/angular-filter.min.js"></script>
+    <script type="text/javascript" src="assets/libs/bootstrap/js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="assets/libs/bootstrap-colorpicker/js/bootstrap-colorpicker.min.js"></script>
+    <script type="text/javascript" src="assets/libs/bootstrap-material-design/js/material.min.js"></script>
+    <script type="text/javascript" src="assets/libs/bootstrap-material-design/js/ripples.min.js"></script>
+    <script type="text/javascript" src="assets/libs/spinjs/spin.min.js"></script>
+    <script type="text/javascript" src="assets/libs/tinymce/tinymce.min.js"></script>
+    <script type="text/javascript" src="app/app.module.js"></script>
+    <script type="text/javascript" src="app/app.routes.js"></script>
+    <script type="text/javascript" src="app/app.resources.js"></script>
+    <script type="text/javascript" src="app/components/home/homeController.js"></script>
+    <script type="text/javascript" src="app/shared/offcanvas/offcanvas.js"></script>
+    <script type="text/javascript" src="app/shared/visualization/visualization.js"></script>
+    <script type="text/javascript" src="assets/libs/d3/d3.v4.min.js"></script>
+    <script type="text/javascript" src="assets/libs/randomColor/randomColor.js"></script>
+    <!--
+    <script type="text/javascript" src="app/components/compounds/compoundsController.js"></script>
+    <script type="text/javascript" src="app/components/compound/compoundController.js"></script>
+    <script type="text/javascript" src="app/components/contact/contactController.js"></script>
+    <script type="text/javascript" src="app/components/enzyme/enzymeController.js"></script>
+    <script type="text/javascript" src="app/components/enzymes/enzymesController.js"></script>
+    <script type="text/javascript" src="app/components/import/importController.js"></script>
+    <script type="text/javascript" src="app/components/login/loginController.js"></script>
+    <script type="text/javascript" src="app/components/pathway/pathwayController.js"></script>
+    <script type="text/javascript" src="app/components/pathways/pathwaysController.js"></script>
+    <script type="text/javascript" src="app/components/search/searchController.js"></script>
+    <script type="text/javascript" src="app/components/substructure/substructureController.js"></script>
+    -->
+    <title>
+        ToucanJS
+    </title>
+</head>
+<body data-ng-app="ToucanJS" data-ng-controller="AppController as ctrl">
+    <div class="container" id="top">
+        <div class="alert alert-warning text-center" ng-if="notSupported()">
+            You are using an <strong>unsupported browser</strong>. Please switch to recent version of either <strong>Chrome, Firefox, Edge, Opera or Safari</strong>.
+        </div>
+        <div class="row">
+            <data-ng-view></data-ng-view>
+        </div>
+        <div class="navbar navbar-default">
+            <div class="container-fluid">
+                <ul class="nav navbar-nav navbar-left">
+                    <li><a href="http://www.kuleuven.be" target="_blank"><img src="assets/img/kuleuven.png" height="40" alt="KULeuven"></a></li>
+                </ul>
+                <ul class="nav navbar-nav navbar-left">
+                    <li><a href="http://www.vib.be" target="_blank"><img src="assets/img/vib.png" height="40" alt="VIB"></a></li>
+                </ul>
+                </ul>
+                <ul class="nav navbar-nav navbar-right">
+                    <li><a href="http://www.bits.vib.be" target="_blank"><img src="assets/img/bits.png" height="40" alt="VIB Bioinformatics Core"></a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <script type="text/javascript">$.material.init();</script>
+</body>
+</html>
