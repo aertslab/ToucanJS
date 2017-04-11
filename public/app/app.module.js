@@ -71,3 +71,12 @@ app.controller('AppController', function($scope, $location, $route, $document, $
     }
 */
 });
+
+
+const valuesPolyfill = function values (object) {
+  return Object.keys(object).map(function(key) {
+    return object[key];
+  });
+};
+
+if (!Object.values) Object.prototype.values = valuesPolyfill;

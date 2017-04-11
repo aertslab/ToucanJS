@@ -10,6 +10,7 @@ angular.module("ToucanJS")
         longestRegionSize: 0,
         options: {
             sequencesLength: 0,
+            maxScore: 0,
             numberOfTicks: 20,
             sequenceColor: 'grey',
             sequenceWidth: 2,
@@ -86,9 +87,10 @@ angular.module("ToucanJS")
         var gffLine = element;
         var gffColumns = gffLine.split('\n', 1)[0].split('\t');
         if (gffColumns.length === 9 && gffColumns[0].length !== 0 && gffColumns[0][0] !== '#') {
-            var featureFromLine = new feature(...gffColumns);
+            var featureFromLine = new feature(gffColumns[0], gffColumns[1], gffColumns[2], gffColumns[3], gffColumns[4], gffColumns[5], gffColumns[6], gffColumns[7], gffColumns[8]);
             if (featureFromLine instanceof feature) {
                 $scope.workspace.features.push(featureFromLine);
+
                 if (!$scope.workspace.sequences[featureFromLine.seqID]) {
                     $scope.workspace.options.sequencesLength ++;
                     $scope.workspace.sequences[featureFromLine.seqID] = {
@@ -97,12 +99,18 @@ angular.module("ToucanJS")
                     }
                 }
                 $scope.workspace.sequences[featureFromLine.seqID].features.push(featureFromLine);
+
+                if (featureFromLine.score > $scope.workspace.options.maxScore) {
+                    $scope.workspace.options.maxScore = featureFromLine.score;
+                }
+
                 if ($scope.workspace.uniqueFeatures.indexOf(featureFromLine.featureID) == -1) {
                     $scope.workspace.uniqueFeatures.push(featureFromLine.featureID);
                 }
                 if (!$scope.workspace.featureColors[featureFromLine.featureID]) {
                     $scope.workspace.featureColors[featureFromLine.featureID] =  randomColor({luminosity: 'dark', count: 1})[0];
                 }
+
                 var currentRegionSize = 0;
                 if ('regionGenomicStart' in featureFromLine && 'regionGenomicEnd' in featureFromLine) {
                     currentRegionSize = featureFromLine.regionGenomicEnd - featureFromLine.regionGenomicStart;
@@ -143,8 +151,6 @@ angular.module("ToucanJS")
             for (var i = 0; i < $scope.workspace.files.length; i++) {
                 File.get({id: $scope.workspace.files[i]['id']}, function(data) {
                     data.features.forEach(ParseGFFLine);
-                    //ctrl.updateVisualization();
-                    //brushed();
                     $timeout(function() {
                         $scope.$apply();
                     })

@@ -139,6 +139,7 @@ angular.module("ToucanJS")
                 context.attr("transform", "translate(" + contextMargins.left + "," + contextMargins.top + ")");
                 context.select('g.axis').attr("transform", "translate(0," + (contextHeight / 2) + ")")
                 context.select('g.brush').call(brush);
+                scoreScale.domain([0, scope.options.maxScore]).range([0, scope.options.featureHeight]);
             }
 
             scope.updatePositioning = function() {
@@ -163,11 +164,13 @@ angular.module("ToucanJS")
                 focus.selectAll("rect.feature")
                     .attr("y", function(d) {
                         if (d.strand == '+')
-                            return parseInt(yScale(d.seqNr) - scope.options.featureHeight)
+                            return parseInt(yScale(d.seqNr) - scoreScale(d.score))
                         else
                             return parseInt(yScale(d.seqNr))
                     })
-                    .attr("height", scope.options.featureHeight)
+                    .attr("height", function(d) {
+                        return scoreScale(d.score)
+                    })
                     .attr("fill", function(d) {
                         return scope.featureColors[d.featureID];
                     })
@@ -227,13 +230,21 @@ angular.module("ToucanJS")
                     .attr("class", "sequence")
                     .attr("x1", 0);
 
+                var comparator = function (b, a) {
+                    var r = (a.relativeEnd - a.relativeStart) - (b.relativeEnd - b.relativeStart);
+                    if (r == 0) {
+                        r = a.score - b.score;
+                    }
+                    return r;
+                }
+
                 // foreach added sequence draw sequence features
                 sequenceAdded.selectAll("rect.feature")
                     .data(function(d, i) {
                         d.features.forEach(function(f) {
                             f.seqNr = d.seqNr;
-                        });
-                        return d.features;
+                        })
+                        return d.features.sort(comparator);
                     }).enter()
                     .append("rect")
                     .attr("class","feature")
@@ -268,6 +279,8 @@ angular.module("ToucanJS")
                 // foreach updated sequence remove sequnce features
                 sequenceRemoved.selectAll("rect.feature")
                     .remove();
+                context.select("g.brush")
+                    .call(brush.move, [0, width]);
 
                 scope.updatePositioning();
             }
@@ -286,6 +299,7 @@ angular.module("ToucanJS")
                 .attr("xmlns", "http://www.w3.org/2000/svg");
 
             // d3 components (scales, brushes, zooms, etc.)
+            var scoreScale      = d3.scaleLinear();
             var focusScale      = d3.scaleLinear();
             var contextScale    = d3.scaleLinear();
             var yScale          = d3.scaleLinear();
