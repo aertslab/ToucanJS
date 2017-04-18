@@ -26,3 +26,12 @@ Grant web users read-write access to the folder(s) listed below:
 ```
 \uploads\
 ```
+
+
+## Supported browsers
+Chrome	Edge	Firefox (Gecko)	Internet Explorer	Opera	Safari
+57		12		44 (44)			11					17		10.0
+
+## Toucan WS
+
+http://tomcat.esat.kuleuven.be/axis/ToucanSOAPService.jws?wsdl

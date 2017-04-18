@@ -665,3 +665,7 @@ pre {
 rect.feature:hover {
     fill-opacity: 1.0;
 }
+
+.hiddenFeature .material-icons {
+    color: #d6d6d6 !important;
+}
