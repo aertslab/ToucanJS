@@ -1,4 +1,5 @@
 var app = angular.module('ToucanJS', []);
+
 app.filter('orderObjectBy', function($filter){
  return function(input, attribute) {
     if (!angular.isObject(input)) return input;
@@ -11,7 +12,8 @@ app.filter('orderObjectBy', function($filter){
     return $filter('orderBy')(array, attribute);
  }
 });
-app.controller('AppController', function($scope, $location, $document, $timeout) {
+
+app.controller('AppController', function($scope, $location, $document, $timeout, UCSC) {
     // referencing controller
     var ctrl = this;
 
@@ -53,6 +55,10 @@ app.controller('AppController', function($scope, $location, $document, $timeout)
         } catch(err) {
         }
     };
+
+    UCSC.getAssemblies().then(function(assemblies) {
+        $scope.UCSCassemblies = assemblies;
+    });
 
     var spinnerOpts = {
           lines: 13 // The number of lines to draw
@@ -103,6 +109,10 @@ app.controller('AppController', function($scope, $location, $document, $timeout)
         sequenceMargin: 200
     };
 
+    $scope.upload = {
+        assemblyDefined: true,
+        filesWithMissingAssemblies: []
+    };
 
     if (!window.indexedDB) {
         window.alert("Your browser doesn't support a stable version of IndexedDB. Please upgrade your browser.");
@@ -178,7 +188,7 @@ app.controller('AppController', function($scope, $location, $document, $timeout)
                     $scope.workspace.sequencesLength ++;
                     $scope.workspace.sequences[featureFromLine.seqID] = {
                         seqID : featureFromLine.seqID,
-                        features: []
+                        features: [],
                     }
                 }
                 $scope.workspace.sequences[featureFromLine.seqID].features.push(featureFromLine);
@@ -208,6 +218,14 @@ app.controller('AppController', function($scope, $location, $document, $timeout)
                     $scope.workspace.sequences[featureFromLine.seqID].regionSize = currentRegionSize;
                 } else {
                     $scope.workspace.sequences[featureFromLine.seqID].regionSize = Math.max($scope.workspace.sequences[featureFromLine.seqID].regionSize, currentRegionSize);
+                }
+
+                if (!$scope.workspace.sequences[featureFromLine.seqID].assembly ) {
+                    $scope.workspace.sequences[featureFromLine.seqID].assembly = featureFromLine.attributes['assembly'];
+                } else {
+                    if ($scope.workspace.sequences[featureFromLine.seqID].assembly != featureFromLine.attributes['assembly']) {
+                        alert("Assembly mismatch");
+                    }
                 }
             }
         }
@@ -246,12 +264,13 @@ app.controller('AppController', function($scope, $location, $document, $timeout)
                 var cursor = event.target.result;
                 if (cursor) {
                     var file = cursor.value;
+                    console.log(file.assembly);
                     $scope.workspace.files.push(file);
                     file.features.forEach(ParseGFFLine);
                     cursor.continue();
                 } else {
                     $scope.workspace.loading = false;
-                    console.log($scope.workspace);
+                    //console.log($scope.workspace);
                     $timeout(function() {
                         $scope.$apply();
                     })
@@ -277,8 +296,23 @@ app.controller('AppController', function($scope, $location, $document, $timeout)
                             fileSpec.ID = successEvt.target.result;
                             $scope.workspace.files.push(fileSpec);
                             features.forEach(ParseGFFLine);
-                            $("#uploadModal").modal('hide');
-                            $("#uploadForm")[0].reset();
+                            var assemblyDefined = true;
+                            for (var seq in $scope.workspace.sequences) {
+                                if (!$scope.workspace.sequences[seq].assembly) {
+                                    assemblyDefined = false;
+                                    break;
+                                }
+                            }
+                            if (assemblyDefined) {
+                                $("#uploadModal").modal('hide');
+                                $("#uploadForm")[0].reset();
+                            } else {
+                                $scope.upload.filesWithMissingAssemblies.push({
+                                    ID: fileSpec.ID,
+                                    name: fileSpec.name
+                                });
+                                $scope.upload.assemblyDefined = false;
+                            }
                             $timeout(function() {
                                 $scope.$apply();
                             });
@@ -286,6 +320,21 @@ app.controller('AppController', function($scope, $location, $document, $timeout)
                 };
                 reader.readAsText(f);
             }
+    }
+
+    ctrl.updateAssembly = function() {
+        for (var i = 0; i < $scope.upload.filesWithMissingAssemblies.length; i++){
+            var fileSpec = $scope.upload.filesWithMissingAssemblies[i];
+            var objectStore = toucanDB.transaction("files", "readwrite").objectStore("files");
+            objectStore.get(fileSpec.ID)
+                .onsuccess = function(successEvt) {
+                    var data = successEvt.target.result;
+                    data.assembly = $scope.upload.assembly;
+                    objectStore.put(data);
+                }
+        }
+        $("#uploadModal").modal('hide');
+        $("#uploadForm")[0].reset();
     }
 
     ctrl.toggleFeature = function(feature) {
@@ -306,7 +355,7 @@ app.controller('AppController', function($scope, $location, $document, $timeout)
         });
         $('#color-'+feature).on('hidePicker', function() {
             $('#color-'+feature).off('changeColor');
-        })
+        });
     }
 
     ctrl.removeFile = function(id) {
@@ -340,5 +389,9 @@ app.controller('AppController', function($scope, $location, $document, $timeout)
         }
     }
 
+    $("#uploadModal").on("show.bs.modal", function() {
+        $scope.upload.assemblyDefined = true;
+        $scope.upload.filesWithMissingAssemblies = [];
+    });
 
 });

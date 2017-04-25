@@ -15,6 +15,7 @@
     <script type="text/javascript" src="assets/libs/bootstrap-material-design/js/ripples.min.js"></script>
     <script type="text/javascript" src="assets/libs/spinjs/spin.min.js"></script>
     <script type="text/javascript" src="app/app.module.js"></script>
+    <script type="text/javascript" src="app/components/ucsc/ucsc.js"></script>
     <script type="text/javascript" src="app/components/offcanvas/offcanvas.js"></script>
     <script type="text/javascript" src="app/components/visualization/visualization.js"></script>
     <script type="text/javascript" src="assets/libs/d3/d3-v4.2.0-alt.js"></script>
@@ -39,8 +40,9 @@
                 <div class="navbar-collapse collapse navbar-warning-collapse">
                     <ul class="nav navbar-nav navbar-right">
                         <li><a class="pointer" data-toggle="modal" data-target="#uploadModal">Upload</a></li>
-                        <li><a class="pointer" data-toggle="offcanvas" data-target="#featuresOffcanvas">Features</a></li>
                         <li><a class="pointer" data-toggle="offcanvas" data-target="#filesOffcanvas">Files</a></li>
+                        <li><a class="pointer" data-toggle="offcanvas" data-target="#sequencesOffcanvas">Regions</a></li>
+                        <li><a class="pointer" data-toggle="offcanvas" data-target="#featuresOffcanvas">Features</a></li>
                         <li><a class="pointer" data-toggle="offcanvas" data-target="#optionsOffcanvas">Options</a></li>
                         <li><a class="pointer" data-ng-click="ctrl.clearWorkspace()">Clear</a></li>
                         <li><a class="pointer" data-toggle="modal" data-target="#aboutModal">About</a></li>
@@ -79,6 +81,24 @@
                     </div>
                 </div>
             </div>
+            <offcanvas id="filesOffcanvas">
+                <div class="panel panel-primary">
+                    <div class="panel-body">
+                        <h5><b>Files</b></h5>
+                        <span data-ng-repeat="file in workspace.files"><a class="pointer" title="Remove this file" data-ng-click="ctrl.removeFile(file.ID)"><i class="material-icons">remove_circle</i></a>{{file.name}}<br /></span>
+                        <a class="pointer" title="Upload new file" data-toggle="modal" data-target="#uploadModal"><i class="material-icons">add_circle</i>upload new file</a>
+                    </div>
+                </div>
+            </offcanvas>
+            <offcanvas id="sequencesOffcanvas">
+                <div class="panel panel-primary">
+                    <div class="panel-body">
+                        <h5><b>Regions</b></h5>
+                        <span data-ng-repeat="file in workspace.files"><a class="pointer" title="Remove this file" data-ng-click="ctrl.removeFile(file.ID)"><i class="material-icons">remove_circle</i></a>{{file.name}}<br /></span>
+                        <a class="pointer" title="Upload new file" data-toggle="modal" data-target="#uploadModal"><i class="material-icons">add_circle</i>upload new file</a>
+                    </div>
+                </div>
+            </offcanvas>
             <offcanvas id="featuresOffcanvas">
                 <div class="panel panel-primary">
                     <div class="panel-body">
@@ -90,15 +110,6 @@
                             <br />
                         </span>
                         <span data-ng-if="workspace.features.length == 0">No features loaded</span>
-                    </div>
-                </div>
-            </offcanvas>
-            <offcanvas id="filesOffcanvas">
-                <div class="panel panel-primary">
-                    <div class="panel-body">
-                        <h5><b>Files</b></h5>
-                        <span data-ng-repeat="file in workspace.files"><a class="pointer" title="Remove this file" data-ng-click="ctrl.removeFile(file.ID)"><i class="material-icons">remove_circle</i></a>{{file.name}}<br /></span>
-                        <a class="pointer" title="Upload new file" data-toggle="modal" data-target="#uploadModal"><i class="material-icons">add_circle</i>upload new file</a>
                     </div>
                 </div>
             </offcanvas>
@@ -220,7 +231,7 @@
             <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
             <h4 class="modal-title">Upload files</h4>
           </div>
-          <div class="modal-body">
+          <div class="modal-body" ng-show="upload.assemblyDefined">
             <form class="form-horizontal" id="uploadForm">
                 <fieldset>
                     <div class="form-group">
@@ -234,8 +245,24 @@
             </form>
             {{message}}
           </div>
-          <div class="modal-footer">
+          <div class="modal-footer" ng-show="upload.assemblyDefined">
             <button type="button" class="btn btn-default" data-ng-click="ctrl.uploadFile($event)">Upload</button>
+          </div>
+          <div class="modal-body" ng-hide="upload.assemblyDefined">
+            <form class="form-horizontal" id="assemblyForm">
+                <fieldset>
+                    <div class="form-group">
+                        <label for="file" class="col-md-2 control-label">Assembly</label>
+                        <div class="col-md-10">
+                            <select class="form-control" ng-model="upload.assembly" ng-options="assembly as assembly for assembly in UCSCassemblies"></select>
+                        </div>
+                    </div>
+                </fieldset>
+            </form>
+            {{message}}
+          </div>
+          <div class="modal-footer" ng-hide="upload.assemblyDefined">
+            <button type="button" class="btn btn-default" data-ng-click="ctrl.updateAssembly()">Apply</button>
           </div>
         </div>
       </div>

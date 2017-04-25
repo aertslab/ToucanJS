@@ -327,6 +327,7 @@ angular.module("ToucanJS")
                         tooltip += '\nSeqID: ' + d.seqID;
                         tooltip += '\nSource: ' + d.source;
                         tooltip += '\nFeature type: ' + d.featureType;
+                        //console.log(d.attributes);
                         for (var attributeID in d.attributes) {
                             tooltip += '\n' + attributeID + ': ' + d.attributes[attributeID];
                         }
