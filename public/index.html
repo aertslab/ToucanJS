@@ -14,6 +14,9 @@
     <script type="text/javascript" src="assets/libs/bootstrap-material-design/js/material.min.js"></script>
     <script type="text/javascript" src="assets/libs/bootstrap-material-design/js/ripples.min.js"></script>
     <script type="text/javascript" src="assets/libs/spinjs/spin.min.js"></script>
+    <link rel="stylesheet" type="text/css" href="assets/libs/igv.js/igv-1.0.7.css">
+    <script type="text/javascript" src="assets/libs/igv.js/igv-1.0.7.js"></script>
+
     <script type="text/javascript" src="app/app.module.js"></script>
     <script type="text/javascript" src="app/components/ucsc/ucsc.js"></script>
     <script type="text/javascript" src="app/components/offcanvas/offcanvas.js"></script>
@@ -41,8 +44,11 @@
                     <ul class="nav navbar-nav navbar-right">
                         <li><a class="pointer" data-toggle="modal" data-target="#uploadModal">Upload</a></li>
                         <li><a class="pointer" data-toggle="offcanvas" data-target="#filesOffcanvas">Files</a></li>
+                        <!--
                         <li><a class="pointer" data-toggle="offcanvas" data-target="#sequencesOffcanvas">Regions</a></li>
+                        -->
                         <li><a class="pointer" data-toggle="offcanvas" data-target="#featuresOffcanvas">Features</a></li>
+                        <li><a class="pointer" data-toggle="offcanvas" data-target="#searchOffcanvas">Search</a></li>
                         <li><a class="pointer" data-toggle="offcanvas" data-target="#optionsOffcanvas">Options</a></li>
                         <li><a class="pointer" data-ng-click="ctrl.clearWorkspace()">Clear</a></li>
                         <li><a class="pointer" data-toggle="modal" data-target="#aboutModal">About</a></li>
@@ -58,6 +64,7 @@
                 </div>
             </div>
         </div>
+        <div id="something"></div>
         <div class="alert alert-warning text-center" data-ng-if="notSupported()">
             You are using an <strong>unsupported browser</strong>. Please switch to recent version of either <strong>Chrome, Firefox, Edge, Opera or Safari</strong>.
         </div>
@@ -69,14 +76,14 @@
                             <span data-ng-if="workspace.loading">
                                 <span id="spinLoading" class="spin">Loading</span> your workspace
                             </span>
-                            <span data-ng-if="!workspace.loading && workspace.features.length == 0">
+                            <span data-ng-if="!workspace.loading && workspace.sequencesLength == 0">
                                 Your workspace is empty. Please upload a file.
                             </span>
-                            <span data-ng-if="!workspace.loading && workspace.features.length != 0">
-                                Loaded {{workspace.features.length}} features from {{workspace.files.length}} files
+                            <span data-ng-if="!workspace.loading && workspace.sequencesLength != 0">
+                                Loaded {{workspace.sequencesLength}} regions from {{workspace.filesLength}} files
                             </span>
                         </div>
-                        <visualization data-ng-show="workspace.features.length != 0" options="options" workspace="workspace">
+                        <visualization data-ng-show="workspace.sequencesLength != 0" options="options" workspace="workspace" search="search">
                         </visualization>
                     </div>
                 </div>
@@ -94,7 +101,7 @@
                 <div class="panel panel-primary">
                     <div class="panel-body">
                         <h5><b>Regions</b></h5>
-                        <span data-ng-repeat="file in workspace.files"><a class="pointer" title="Remove this file" data-ng-click="ctrl.removeFile(file.ID)"><i class="material-icons">remove_circle</i></a>{{file.name}}<br /></span>
+                        <span data-ng-repeat="sequence in workspace.sequences"><a class="pointer" title="Remove this sequence" data-ng-click="ctrl.removeSequence(file.ID)"><i class="material-icons">remove_circle</i></a>{{sequence.seqID}}<br /></span>
                         <a class="pointer" title="Upload new file" data-toggle="modal" data-target="#uploadModal"><i class="material-icons">add_circle</i>upload new file</a>
                     </div>
                 </div>
@@ -103,13 +110,58 @@
                 <div class="panel panel-primary">
                     <div class="panel-body">
                         <h5><b>Features</b></h5>
-                        <span data-ng-repeat="feature in workspace.featureTypes | orderObjectBy: 'ID'" style="color: {{feature.color}}">
-                            <a id="toggle-{{feature.ID}}" class="featureToggle pointer" ng-class="{hiddenFeature: !feature.show}" title="Hide / show this feature" data-ng-click="ctrl.toggleFeature(feature.ID)"><i class="material-icons">remove_red_eye</i></a>
-                            <a id="color-{{feature.ID}}" class="featureColor pointer" ng-class="{hiddenFeature: !feature.show}" title="Color this feature" data-ng-click="ctrl.colorFeature(feature.ID)"><i class="material-icons">invert_colors</i></a>
+                        <span data-ng-repeat="feature in workspace.features track by $index | orderObjectBy: 'ID'" style="color: {{feature.color}}">
+                            <a id="toggle-{{feature.ID}}" class="featureToggle pointer" ng-class="{hiddenFeature: !feature.show}" title="Hide / show this feature" data-ng-click="ctrl.toggleFeature(feature)"><i class="material-icons">remove_red_eye</i></a>
+                            <a id="color-{{feature.ID}}" class="featureColor pointer" ng-class="{hiddenFeature: !feature.show}" title="Color this feature" data-ng-click="ctrl.colorFeature(feature)"><i class="material-icons">invert_colors</i></a>
                             {{feature.ID}}
                             <br />
                         </span>
-                        <span data-ng-if="workspace.features.length == 0">No features loaded</span>
+                        <span data-ng-if="workspace.sequencesLength == 0">No features loaded</span>
+                    </div>
+                </div>
+            </offcanvas>
+            <offcanvas id="searchOffcanvas">
+                <div class="panel panel-primary">
+                    <div class="panel-body">
+                        <h5><b>Search</b></h5>
+                        <form class="form-horizontal" id="searchForm" name="searchForm">
+                            <fieldset>
+                                <div class="form-group">
+                                    <label for="file" class="col-md-4 control-label">RegExp</label>
+                                    <div class="col-md-8">
+                                        <input class="form-control" ng-model="search.regexp" required ng-change="ctrl.searchFeatures()" />
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="file" class="col-md-4 control-label">Name</label>
+                                    <div class="col-md-8">
+                                        <input class="form-control" ng-model="search.name" required />
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="file" class="col-md-4 control-label">Score</label>
+                                    <div class="col-md-8">
+                                        <input type="number" class="form-control" ng-model="search.score" required min="0" step="0.1" />
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="file" class="col-md-4 control-label">Color</label>
+                                    <div id="cp2" class="input-group colorpicker-component colorpicker-hidden">
+                                        <input type="text" value="#00AABB" class="form-control" required />
+                                        <span class="input-group-addon"><i></i></span>
+                                    </div>
+                                </div>
+                                <div class="text-right">
+                                    <br />
+                                    Available {{workspace.sequencesLoaded}} / {{workspace.sequencesLength}} DNA sequences
+                                    <div ng-if="!search.invalid">Found {{search.matchCount}} matches</div>
+                                    <div ng-if="search.invalid" class="red">Invalid regexp</div>
+                                    <div ng-if="search.limit" class="red">Search limit reached!</div>
+                                    <br />
+                                    <button class="btn btn-default" type="submit" ng-disabled="search.matches == 0 || search.limit" ng-click="searchForm.$valid && ctrl.saveFeature()">Save</button>
+                                </div>
+                            </fieldset>
+                        </form>
                     </div>
                 </div>
             </offcanvas>
@@ -235,10 +287,24 @@
             <form class="form-horizontal" id="uploadForm">
                 <fieldset>
                     <div class="form-group">
-                        <label for="file" class="col-md-2 control-label"> GFF file(s)</label>
-                        <div class="col-md-10">
+                        <label for="GFFfile" class="col-md-3 control-label"> GFF file(s)</label>
+                        <div class="col-md-9">
                             <input type="text" readonly="" class="form-control" placeholder="Browse...">
-                            <input type="file" id="file" name="file" multiple>
+                            <input type="file" id="GFFfile" name="GFFfile" multiple>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="BEDfile" class="col-md-3 control-label"> BED file(s)</label>
+                        <div class="col-md-9">
+                            <input type="text" readonly="" class="form-control" placeholder="Browse...">
+                            <input type="file" id="BEDfile" name="BEDfile" multiple>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="bigWigFile" class="col-md-3 control-label"> bigWig file(s)</label>
+                        <div class="col-md-9">
+                            <input type="text" readonly="" class="form-control" placeholder="Browse...">
+                            <input type="file" id="bigWigFile" name="bigWigFile" multiple>
                         </div>
                     </div>
                 </fieldset>
@@ -297,6 +363,10 @@
         </div>
       </div>
     </div>
-    <script type="text/javascript">$.material.init();</script>
+    <script type="text/javascript">
+        //$.material.init();
+        //$(function() {
+        //});
+    </script>
 </body>
 </html>

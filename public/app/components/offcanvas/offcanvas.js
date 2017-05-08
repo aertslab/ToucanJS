@@ -47,6 +47,7 @@ angular.module("ToucanJS")
                     $('.offcanvas-wrapper').addClass('offcanvas-show');
                 }
             });
+            $.material.init();
         }
     };
 });

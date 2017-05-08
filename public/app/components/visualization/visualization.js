@@ -5,9 +5,11 @@ angular.module("ToucanJS")
         templateUrl: 'app/components/visualization/visualization.html',
         scope: {
             options : '<',
-            workspace: '<'
+            workspace: '<',
+            search: '='
         },
         link: function(scope, elem, attr) {
+            scope.search.matches = {};
 
             // drawind custom focus X axis
             var customFocusAxis = function(g) {
@@ -24,6 +26,7 @@ angular.module("ToucanJS")
                     .attr("x2", function(d) {
                         return parseInt(focusXScale(d.regionSize));
                     });
+
                 // length and position of feature
                 focus.selectAll("rect.feature")
                     .attr("x", function(d) {
@@ -31,6 +34,15 @@ angular.module("ToucanJS")
                     })
                     .attr("width", function(d) {
                         return parseInt(focusXScale(d.relativeEnd) - focusXScale(d.relativeStart));
+                    });
+
+                // lenght and position of searched motifs
+                focus.selectAll("rect.search")
+                    .attr("x", function(d) {
+                        return parseInt(focusXScale(d.start));
+                    })
+                    .attr("width", function(d) {
+                        return parseInt(focusXScale(d.end) - focusXScale(d.start));
                     });
                 scope.updatePositioning();
             }
@@ -107,6 +119,8 @@ angular.module("ToucanJS")
                 // get the parent width
                 width = elem.parent().width();
                 if (!width) return;
+
+                scoreScale.domain([0, scope.options.maxScore]);
 
                 // calculate the dimensions
                 height = scope.options.height;
@@ -215,9 +229,50 @@ angular.module("ToucanJS")
                         return scoreScale(d.score);
                     })
 
+                // update searched motifs dimensions and position
+                focus.selectAll("rect.search")
+                    .attr("y", function(d) {
+                        if (d.strand == '+')
+                            return parseInt(focusYScale(d.seqNr) - scoreScale(scope.search.score))
+                        else
+                            return parseInt(focusYScale(d.seqNr))
+                    })
+                    .attr("height", function(d) {
+                        return scoreScale(scope.search.score);
+                    })
+            }
+
+            scope.highlightSearch = function() {
+                var foundFeatures = focus.selectAll("g.sequence")
+                    .selectAll("rect.search")
+                    .data(function(d) {
+                        if (!scope.search.matches[d.seqID]) return [];
+                        scope.search.matches[d.seqID].forEach(function(m) {
+                            m.seqNr = d.seqNr;
+                        });
+                        return scope.search.matches[d.seqID];
+                    });
+                foundFeatures.enter()
+                    .append("rect")
+                    .attr("class","search");
+                foundFeatures.exit()
+                    .remove();
+                scope.updateStrokeAndFill();
+                updateFocusScale();
+                // TODO: hack to refresh sequence features on save
+                if (scope.search.matchCount == 0) {
+                    focus.selectAll("g.sequence").remove();
+                    scope.updateSequences();
+                }
             }
 
             scope.updateStrokeAndFill = function() {
+                names.selectAll("text.name")
+                    .attr("fill", function(d) {
+                        if (scope.search.matches[d.seqID] && scope.search.matches[d.seqID].length) return scope.options.sequenceFoundColor;
+                        if (d.DNAsequence.length) return scope.options.sequenceDownloadedColor;
+                        return scope.options.sequenceNameColor;
+                    });
                 // update sequnce line color
                 focus.selectAll("g.sequence")
                     .attr("stroke", scope.options.sequenceColor)
@@ -226,29 +281,39 @@ angular.module("ToucanJS")
                 // update seuence feature colors
                 focus.selectAll("rect.feature")
                     .attr("fill", function(d) {
-                        return scope.workspace.featureTypes[d.featureID].color;
+                        return scope.workspace.features[d.featureID].color;
                     })
                     .attr("fill-opacity", function(d) {
-                        return scope.workspace.featureTypes[d.featureID].opacity;
+                        return scope.workspace.features[d.featureID].opacity;
                     })
                     .attr("stroke", scope.options.featureStrokeColor)
                     .attr("stroke-width", scope.options.featureStrokeWidth)
                     .attr("stroke-opacity", scope.options.featureStrokeOpacity)
                     .attr("visibility", function(d) {
-                        return scope.workspace.featureTypes[d.featureID].show ? 'visible' : 'hidden';
+                        return scope.workspace.features[d.featureID].show ? 'visible' : 'hidden';
                     });
+
+                focus.selectAll("rect.search")
+                    .attr("fill", function(d) {
+                        return scope.search.color;
+                    })
+                    .attr("fill-opacity", function(d) {
+                        return scope.search.opacity;
+                    })
+                    .attr("stroke", scope.options.featureStrokeColor)
+                    .attr("stroke-width", scope.options.featureStrokeWidth)
+                    .attr("stroke-opacity", scope.options.featureStrokeOpacity);
             }
 
             // handling changes to feature object
             scope.updateSequences = function() {
-                if (!scope.workspace.features) return;
+                if (scope.workspace.sequencesLength == 0) return;
 
                 // update scale domains
                 focusYScale.domain([0, scope.workspace.sequencesLength]);
-                focusXScale.domain([0, scope.workspace.longestRegionSize]);
-                contextXScale.domain([0, scope.workspace.longestRegionSize]);
+                focusXScale.domain([0, scope.options.longestRegionSize]);
+                contextXScale.domain([0, scope.options.longestRegionSize]);
                 contextYScale.domain([0, scope.workspace.sequencesLength]);
-                scoreScale.domain([0, scope.workspace.maxScore]);
                 focus.select(".axis--x")
                     .call(customFocusAxis);
                 contextX.select(".axis--x")
@@ -274,7 +339,7 @@ angular.module("ToucanJS")
 
                 // process changes to focus block
                 var sequence = focus.selectAll("g.sequence")
-                    .data(function(d) {
+                    .data(function() {
                         var seqs = Object.values(scope.workspace.sequences);
                         seqs.forEach(function(s, i) {
                             s.seqNr = i;
@@ -305,9 +370,10 @@ angular.module("ToucanJS")
                     .data(function(d, i) {
                         d.features.forEach(function(f) {
                             f.seqNr = d.seqNr;
-                        })
+                        });
                         return d.features.sort(comparator);
-                    }).enter()
+                    })
+                    .enter()
                     .append("rect")
                     .attr("class","feature")
                     // foreach added sequence add hover tooltip
@@ -326,8 +392,8 @@ angular.module("ToucanJS")
                         tooltip += '\nPhase: ' + d.phase;
                         tooltip += '\nSeqID: ' + d.seqID;
                         tooltip += '\nSource: ' + d.source;
+                        tooltip += '\nGene: ' + d.gene;
                         tooltip += '\nFeature type: ' + d.featureType;
-                        //console.log(d.attributes);
                         for (var attributeID in d.attributes) {
                             tooltip += '\n' + attributeID + ': ' + d.attributes[attributeID];
                         }
@@ -339,6 +405,7 @@ angular.module("ToucanJS")
                 // foreach removed sequence remove sequnce line
                 sequenceRemoved.selectAll("line.sequence")
                     .remove();
+
                 // foreach updated sequence remove sequnce features
                 sequenceRemoved.selectAll("rect.feature")
                     .remove();
@@ -438,14 +505,21 @@ angular.module("ToucanJS")
 
 
             // handling attr changes
+            /*
             scope.$watch('workspace.sequences', function() {
                 scope.updateDimensions();
                 scope.updateSequences();
                 scope.updateStrokeAndFill();
             }, true);
+            */
             scope.$watch('workspace', function() {
+                if (!scope.workspace.sequencesLength) return;
                 scope.updateDimensions();
+                scope.updateSequences();
                 scope.updateStrokeAndFill();
+            }, true);
+            scope.$watch('search', function() {
+                scope.highlightSearch();
             }, true);
             scope.$watch('options', function() {
                 scope.updateDimensions();

@@ -669,3 +669,10 @@ rect.feature:hover {
 .hiddenFeature .material-icons {
     color: #d6d6d6 !important;
 }
+
+.colorpicker-hidden {
+    padding-top: 5px;
+}
+.colorpicker-hidden > input {
+    display: none !important;
+}
