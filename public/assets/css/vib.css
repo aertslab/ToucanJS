@@ -619,6 +619,10 @@ pre {
     pointer-events: all;
 }
 
+.zoom.cutting {
+    cursor: crosshair;
+}
+
 .offcanvas {
     width: 300px;
     height: 100%;
@@ -631,11 +635,11 @@ pre {
 
 .offcanvas .panel-body {
     min-height: 480px;
-
+    overflow-y: auto;
 }
 .offcanvas-close {
     position: absolute;
-    right: 10px;
+    right: 25px;
     top: 10px;
 }
 
@@ -666,6 +670,10 @@ rect.feature:hover {
     fill-opacity: 1.0;
 }
 
+a .material-icons {
+    font-size: 1.2em;
+}
+
 .hiddenFeature .material-icons {
     color: #d6d6d6 !important;
 }
@@ -675,4 +683,12 @@ rect.feature:hover {
 }
 .colorpicker-hidden > input {
     display: none !important;
+}
+
+#indicatorDB i {
+    position: absolute;
+    margin:  0px;
+    padding: 0px;
+    top: 10px;
+    left: 10px;
 }

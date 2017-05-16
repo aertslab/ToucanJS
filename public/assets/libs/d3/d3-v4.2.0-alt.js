@@ -11965,7 +11965,8 @@ var   keyPrefix$1 = "$";
     this.transform = transform;
   }
 
-  function Transform(k, x, y, ky = k) {
+  function Transform(k, x, y, ky) {
+    if (!ky) ky = k;
     this.k = k;
     this.ky = ky;
     this.x = x;
@@ -11974,7 +11975,8 @@ var   keyPrefix$1 = "$";
 
   Transform.prototype = {
     constructor: Transform,
-    scale: function(k, ky = k) {
+    scale: function(k, ky) {
+      if (!ky) ky = k;
       ky = ky || k;
       return k === 1 && ky === 1 ? this : new Transform(this.k * k, this.x, this.y, this.ky * ky);
     },

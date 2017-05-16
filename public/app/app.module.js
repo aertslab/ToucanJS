@@ -22,9 +22,11 @@ app.controller('AppController', function($scope, $location, $document, $timeout,
     // setting up Toucan DB (IndexedDB)
     var DBOpenRequest = window.indexedDB.open("ToucanDB", 4);
     var toucanDB;
+    $scope.DBRequests = 0;
 
     // error handler for opening Toucan DB
     DBOpenRequest.onerror = function(event) {
+        console.log("ToucanDB error", event);
         alert('Error loading a ToucanDB');
     };
 
@@ -61,20 +63,28 @@ app.controller('AppController', function($scope, $location, $document, $timeout,
         };
 
         // recreate files store
-        db.deleteObjectStore("files");
+        try {
+            db.deleteObjectStore("files");
+        } catch (err) {}
         db.createObjectStore("files", { keyPath: "ID", autoIncrement: true })
             .createIndex("name", "name", { unique: false });
 
         // recreate sequences store
-        db.deleteObjectStore("sequences");
+        try {
+            db.deleteObjectStore("sequences");
+        } catch (err) {}
         db.createObjectStore("sequences", { keyPath: "seqID", autoIncrement: false });
 
         // recreate features store
-        db.deleteObjectStore("features");
+        try {
+            db.deleteObjectStore("features");
+        } catch (err) {}
         db.createObjectStore("features", { keyPath: "ID", autoIncrement: false });
 
         // recreate options store
-        db.deleteObjectStore("options");
+        try {
+            db.deleteObjectStore("options");
+        } catch (err) {}
         db.createObjectStore("options", { keyPath: "ID", autoIncrement: true });
     };
 
@@ -108,6 +118,7 @@ app.controller('AppController', function($scope, $location, $document, $timeout,
         featuresLength: 0,
         filesLength: 0,
         sequencesLength: 0,
+        sequenceFeaturesLength: 0,
         sequencesLoaded: 0,
     };
 
@@ -158,6 +169,22 @@ app.controller('AppController', function($scope, $location, $document, $timeout,
         matchCount: 0,
     };
 
+    $scope.move = {
+        dx: 0,
+        moving: false,
+        seqID: null
+    };
+
+    $scope.cut = {
+        cutting: false,
+        drag: false,
+        state: 0,
+        start: 0,
+        startX: 0,
+        end: 0,
+        endX: 0
+    };
+
     // check for IDB support
     if (!window.indexedDB) {
         window.alert("Your browser doesn't support a stable version of IndexedDB. Please upgrade your browser.");
@@ -166,6 +193,45 @@ app.controller('AppController', function($scope, $location, $document, $timeout,
     // check for FileAPI support
     if (!(window.File && window.FileReader && window.FileList && window.Blob)) {
         window.alert("Your browser doesn't support a stable version of File API. Please upgrade your browser.");
+    }
+
+    $(window).on("beforeunload", function() {
+        if ($scope.DBRequests > 0)
+            return "ToucanJS is still writing changes to the database. If you leave now you will loose some of the data.";
+        else
+            return undefined;
+    });
+
+    function DBSave(store, obj, callback) {
+        $scope.DBRequests++;
+        var t = toucanDB.transaction(store, "readwrite")
+            .objectStore(store)
+            .put(obj);
+        t.onsuccess = function(evt) {
+                if (callback) callback(evt);
+                $scope.DBRequests--;
+                $timeout(function() {
+                    $scope.$apply();
+                });
+            };
+        t.onerror = function(evt) {
+            $scope.DBRequests--;
+            console.log(evt);
+        }
+    }
+
+    function DBDelete(store, id, callback) {
+        $scope.DBRequests++;
+        request = toucanDB.transaction(store, "readwrite")
+            .objectStore(store)
+            .delete(id)
+            .onsuccess = function(evt) {
+                if (callback) callback(evt);
+                $scope.DBRequests--;
+                $timeout(function() {
+                    $scope.$apply();
+                });
+            };
     }
 
     // feature generator for GFF parser
@@ -232,6 +298,8 @@ app.controller('AppController', function($scope, $location, $document, $timeout,
         if (gffColumns.length == 9 && gffColumns[0].length != 0 && gffColumns[0][0] != '#') {
             // make new sequence feature
             var seqFeature = new Feature(gffColumns[0], gffColumns[1], gffColumns[2], gffColumns[3], gffColumns[4], gffColumns[5], gffColumns[6], gffColumns[7], gffColumns[8]);
+            seqFeature.fileID = this.ID;
+            $scope.workspace.sequenceFeaturesLength++;
             var seq;
             if ($scope.workspace.sequences[seqFeature.seqID]) {
                 // get sequence for this feature
@@ -245,15 +313,13 @@ app.controller('AppController', function($scope, $location, $document, $timeout,
                     genomicEnd: seqFeature.regionGenomicEnd,
                     fileID : this.ID,
                     features: [],
+                    show: true,
                     DNAsequence: ""
                 };
                 // add to workspace scope
                 $scope.workspace.sequences[seqFeature.seqID] = seq;
                 $scope.workspace.sequencesLength ++;
                 // save newly created sequence instance it to ToucanDB
-                toucanDB.transaction("sequences", "readwrite")
-                    .objectStore("sequences")
-                    .add(seq);
             }
             // add feature to sequence
             seq.features.push(seqFeature);
@@ -273,9 +339,7 @@ app.controller('AppController', function($scope, $location, $document, $timeout,
                     show: true
                 }
                 $scope.workspace.features[seqFeature.featureID] = feature;
-                toucanDB.transaction("features", "readwrite")
-                    .objectStore("features")
-                    .add(feature);
+                saveFeature(feature);
             }
 
             // adjust the sequence region size
@@ -295,24 +359,20 @@ app.controller('AppController', function($scope, $location, $document, $timeout,
             // define the sequence assembly if present
             if (!seq.assembly) {
                 seq.assembly = seqFeature.attributes['assembly'];
-            } else {
+            } else if (seqFeature.attributes['assembly'] && seqFeature.attributes['assembly'] != undefined){
                 if (seq.assembly != seqFeature.attributes['assembly']) {
-                    alert("Assembly mismatch");
+                    alert("Assembly mismatch: "+ seq.assembly + " vs. "+seqFeature.attributes['assembly']);
                 }
             }
 
             // save the sequence changes
-            toucanDB.transaction("sequences", "readwrite")
-                .objectStore("sequences")
-                .put(seq);
-
-            // save the options changes
-            ctrl.saveOptions();
+            saveSequence(seq);
         }
     }
 
     // load sequences from ToucanDB
     function loadSequences() {
+        $scope.DBRequests++;
         toucanDB.transaction("sequences")
             .objectStore("sequences")
             .openCursor()
@@ -323,12 +383,15 @@ app.controller('AppController', function($scope, $location, $document, $timeout,
                     var seq = sequencesCursor.value;
                     $scope.workspace.sequences[seq.seqID] = seq;
                     $scope.workspace.sequencesLength ++;
+                    $scope.workspace.sequenceFeaturesLength += seq.features.length;
                     sequencesCursor.continue();
                 } else {
+                    $scope.DBRequests--;
                     // no more sequences: done loading => get sequences & refresh scope
                     $scope.workspace.loading = false;
-                    if ($scope.workspace.sequencesLength)
+                    if ($scope.workspace.sequencesLength) {
                         $scope.options.featureHeight = parseInt(($scope.options.height-3*$scope.options.margin-$scope.options.contextHeight)/(2*$scope.workspace.sequencesLength));
+                    }
                     $timeout(function() {
                         ctrl.getSequences();
                         $scope.$apply();
@@ -337,8 +400,17 @@ app.controller('AppController', function($scope, $location, $document, $timeout,
             }
     }
 
+    function saveSequence(seq, callback) {
+        DBSave("sequences", seq, callback);
+    }
+
+    function deleteSequence(seqID, callback) {
+        DBDelete("sequences", seqID, callback);
+    }
+
     // load feature definitions from ToucanDB
     function loadFeatures() {
+        $scope.DBRequests++;
         toucanDB.transaction("features")
             .objectStore("features")
             .openCursor()
@@ -350,14 +422,24 @@ app.controller('AppController', function($scope, $location, $document, $timeout,
                     $scope.workspace.features[featureDef.ID] = featureDef;
                     featureCursor.continue();
                 } else {
+                    $scope.DBRequests--;
                     // no more features : go to next step => loading sequences
                     loadSequences();
                 }
             }
     }
 
+    function saveFeature(feature, callback) {
+        DBSave("features", feature, callback);
+    }
+
+    function deleteFeature(featureID, callback) {
+        DBDelete("features", featureID, callback);
+    }
+
     // load files from ToucanDB
     function loadFiles() {
+        $scope.DBRequests++;
         toucanDB.transaction("files")
             .objectStore("files")
             .openCursor()
@@ -370,36 +452,54 @@ app.controller('AppController', function($scope, $location, $document, $timeout,
                     $scope.workspace.filesLength++;
                     filesCursor.continue();
                 } else {
+                    $scope.DBRequests--;
                     // no more files: go to next step => loading features
                     loadFeatures();
                 }
             }
     }
 
+    function saveFile(file, callback) {
+        DBSave("files", file, callback);
+    }
+
+    function deleteFile(fileID, callback) {
+        DBDelete("files", fileID, callback);
+    }
+
     // load options from ToucanDB
     function loadOptions() {
+        let opts = null;
+        $scope.DBRequests++;
         toucanDB.transaction("options")
             .objectStore("options")
-            .getAll()
+            .openCursor()
             .onsuccess = function(event) {
-                var opts = event.target.result;
-                if (opts.length == 0) {
-                    // no options yet present in Toucan DB: save the current ones
-                    toucanDB.transaction("options", "readwrite")
-                        .objectStore("options")
-                        .add($scope.options)
-                        .onsuccess = function(addEvt) {
-                            $scope.options.ID = addEvt.target.result;
-                        }
+                var optionsCursor = event.target.result;
+                if (optionsCursor) {
+                    opts = optionsCursor.value;
+                    optionsCursor.continue();
                 } else {
-                    // load the options from ToucanDB to options scope
-                    $scope.options = opts[0];
+                    $scope.DBRequests--;
+                    if (opts === null) {
+                        // no options yet present in Toucan DB: save the current ones
+                        saveOptions($scope.options, function(addEvt) {
+                            $scope.options.ID = addEvt.target.result;
+                        });
+                    } else {
+                        // load the options from ToucanDB to options scope
+                        $scope.options = opts;
+                    }
+                    // update max score for search scope
+                    $scope.search.score = $scope.options.maxScore;
+                    // go to next step => loading files
+                    loadFiles();
                 }
-                // update max score for search scope
-                $scope.search.score = $scope.options.maxScore;
-                // go to next step => loading files
-                loadFiles();
             }
+    }
+
+    function saveOptions(opts, callback) {
+        DBSave("options", opts, callback);
     }
 
     function compliment(base) {
@@ -416,6 +516,11 @@ app.controller('AppController', function($scope, $location, $document, $timeout,
             newSequence += compliment(sequence[i]);
         }
         return newSequence;
+    }
+
+    function getChrom(chrom) {
+        var res = chrom.match(/chr.+$/ig);
+        return res && res[0] ? res[0] : '';
     }
 
     // load complete workspace from ToucanDB
@@ -439,30 +544,38 @@ app.controller('AppController', function($scope, $location, $document, $timeout,
                 continue;
             }
             // if assembly not spefified, get the provided assembly during file upload
-            var assembly = seq.assembly ? seq.assembly : $scope.workspace.files[seq.fileID].assembly;
+            seq.assembly = seq.assembly ? seq.assembly : ($scope.workspace.files[seq.fileID] ? $scope.workspace.files[seq.fileID].assembly : null);
             // extract chromosome nr
-            var chromosome = seq.genomicChrom.match(/chr.+$/ig)[0];
+            var chromosome = seq.genomicChrom ? getChrom(seq.genomicChrom) : null;
             // use USCS to obtain sequence
-            UCSC.getSequence(assembly, chromosome, seq.genomicStart, seq.genomicEnd)
+            UCSC.getSequence(seq.assembly, chromosome, seq.genomicStart, seq.genomicEnd)
                 .then(function(sequence) {
                     seq.DNAsequence = sequence;
+                    // add to workspace scope
+                    $scope.workspace.sequences[seq.seqID].DNAsequence = sequence;
+                    $scope.workspace.sequences[seq.seqID].reverseComplimentDNAsequence = reverseCompliment(sequence);
+                    $scope.workspace.sequencesLoaded ++;
                     // save to ToucanDB
-                    toucanDB.transaction("sequences", "readwrite")
-                        .objectStore("sequences")
-                        .put(seq)
-                        .onsuccess = function(addEvt) {
-                            // add to workspace scope
-                            $scope.workspace.sequences[seq.seqID].DNAsequence = sequence;
-                            $scope.workspace.sequences[seq.seqID].reverseComplimentDNAsequence = reverseCompliment(sequence);
-                            $scope.workspace.sequencesLoaded ++;
-                            // refresh scope
-                            $timeout(function() {
-                                $scope.$apply();
-                            });
-                        };
+                    saveSequence(seq);
+                    // refresh scope
+                    $timeout(function() {
+                        $scope.$apply();
+                    });
                 }, function(message) {
                     console.log("Loading DNA sequence from UCSC for " + seq.seqID + " failed: " + message);
                 });
+        }
+    }
+
+    ctrl.toggleSequence = function(seq) {
+        seq.show = !seq.show;
+        saveSequence(seq);
+    }
+
+    ctrl.removeSequence = function(seqID) {
+        if (confirm("Are you sure to remove this file and all associated features?")) {
+            delete($scope.workspace.sequences[seqID]);
+            deleteSequence(seqID);
         }
     }
 
@@ -474,37 +587,37 @@ app.controller('AppController', function($scope, $location, $document, $timeout,
             reader.onload = function(loadEvt) {
                 let features = loadEvt.target.result.split("\n");
                 let fileSpec = {
-                    name: f.name
+                    name: f.name,
+                    show: true
                 };
-                var request = toucanDB.transaction("files", "readwrite")
-                    .objectStore("files")
-                    .add(fileSpec)
-                    .onsuccess = function(successEvt) {
-                        fileSpec.ID = successEvt.target.result;
-                        $scope.workspace.files[fileSpec.ID] = fileSpec;
-                        features.forEach(parseGFFLine, fileSpec);
-                        var assemblyDefined = true;
-                        for (var seq in $scope.workspace.sequences) {
-                            if (!$scope.workspace.sequences[seq].assembly) {
-                                assemblyDefined = false;
-                                break;
-                            }
+                saveFile(fileSpec, function(successEvt) {
+                    fileSpec.ID = successEvt.target.result;
+                    $scope.workspace.files[fileSpec.ID] = fileSpec;
+                    features.forEach(parseGFFLine, fileSpec);
+                    // save the options changes
+                    saveOptions($scope.options);
+                    var assemblyDefined = true;
+                    for (var seq in $scope.workspace.sequences) {
+                        if (!$scope.workspace.sequences[seq].assembly) {
+                            assemblyDefined = false;
+                            break;
                         }
-                        if (assemblyDefined) {
-                            $("#uploadModal").modal('hide');
-                            $("#uploadForm")[0].reset();
-                            ctrl.getSequences();
-                        } else {
-                            $scope.upload.filesWithMissingAssemblies.push(fileSpec);
-                            $scope.upload.assemblyDefined = false;
-                        }
-                        $scope.workspace.filesLength++;
-                        $scope.options.featureHeight = parseInt(($scope.options.height-3*$scope.options.margin-$scope.options.contextHeight)/(2*$scope.workspace.sequencesLength));
-                        $timeout(function() {
-                            ctrl.saveOptions();
-                            $scope.$apply();
-                        });
-                    };
+                    }
+                    if (assemblyDefined) {
+                        $("#uploadModal").modal('hide');
+                        $("#uploadForm")[0].reset();
+                        ctrl.getSequences();
+                    } else {
+                        $scope.upload.filesWithMissingAssemblies.push(fileSpec);
+                        $scope.upload.assemblyDefined = false;
+                    }
+                    $scope.workspace.filesLength++;
+                    $scope.options.featureHeight = parseInt(($scope.options.height-3*$scope.options.margin-$scope.options.contextHeight)/(2*$scope.workspace.sequencesLength));
+                    $timeout(function() {
+                        saveOptions($scope.options);
+                        $scope.$apply();
+                    });
+                });
             };
             reader.readAsText(f);
         }
@@ -514,9 +627,7 @@ app.controller('AppController', function($scope, $location, $document, $timeout,
         for (var i = 0; i < $scope.upload.filesWithMissingAssemblies.length; i++){
             var fileSpec = $scope.upload.filesWithMissingAssemblies[i];
             fileSpec.assembly = $scope.upload.assembly;
-            toucanDB.transaction("files", "readwrite")
-                .objectStore("files")
-                .put(fileSpec);
+            saveFile(fileSpec);
         }
         $("#uploadModal").modal('hide');
         $("#uploadForm")[0].reset();
@@ -526,13 +637,38 @@ app.controller('AppController', function($scope, $location, $document, $timeout,
 
     ctrl.toggleFeature = function(feature) {
         feature.show = !feature.show;
-        toucanDB.transaction("features", "readwrite")
-            .objectStore("features")
-            .put(feature);
+        saveFeature(feature);
+    }
+
+    ctrl.removeFeature = function(featureID) {
+        if (confirm("Are you sure to remove all associated features with this group?")) {
+            for (var seqID in $scope.workspace.sequences) {
+                var seq = $scope.workspace.sequences[seqID];
+                for (var f = seq.features.length - 1; f >= 0; f--) {
+                    if (seq.features[f].featureID == featureID) {
+                        seq.features.splice(f, 1);
+                        $scope.workspace.sequenceFeaturesLength--;
+                    }
+                }
+                if (seq.features.length == 0) {
+                    delete($scope.workspace.sequences[seqID]);
+                    deleteSequence(seqID);
+                    $scope.workspace.sequencesLength--;
+                } else {
+                    saveSequence(seq);
+                }
+            }
+            delete($scope.workspace.features[featureID]);
+            deleteFeature(featureID);
+        }
+    }
+
+    $scope.escapeID = function(id) {
+        return hex_md5(id);
     }
 
     ctrl.colorFeature = function(feature) {
-        var control = $('#color-'+feature.ID);
+        var control = $('#color-'+$scope.escapeID(feature.ID));
         control.colorpicker('setValue', feature.color);
         control.data('colorpicker').color.setAlpha(feature.opacity);
         control.colorpicker('update');
@@ -540,9 +676,7 @@ app.controller('AppController', function($scope, $location, $document, $timeout,
         control.on('changeColor', function(e) {
             feature.color = e.color.toHex();
             feature.opacity = e.color.value.a;
-            toucanDB.transaction("features", "readwrite")
-                .objectStore("features")
-                .put(feature);
+            saveFeature(feature);
             $timeout(function() {
                 $scope.$apply();
             });
@@ -552,18 +686,35 @@ app.controller('AppController', function($scope, $location, $document, $timeout,
         });
     }
 
+    ctrl.toggleFile = function(file) {
+        file.show = !file.show;
+        saveFile(file);
+    }
+
+
     ctrl.removeFile = function(id) {
-        if (confirm("Are you sure to remove this file?")) {
-            request = toucanDB.transaction("files", "readwrite")
-                .objectStore("files")
-                .delete(id)
-                .onsuccess = function(event) {
-                    ctrl.loadWorkspace();
-                };
+        if (confirm("Are you sure to remove this file and all associated features?")) {
+            for (var seqID in $scope.workspace.sequences) {
+                var seq = $scope.workspace.sequences[seqID];
+                for (var f = seq.features.length - 1; f >= 0; f--) {
+                    if (seq.features[f].fileID == id) {
+                        seq.features.splice(f, 1);
+                        $scope.workspace.sequenceFeaturesLength--;
+                    }
+                }
+                if (seq.features.length == 0) {
+                    delete($scope.workspace.sequences[seqID]);
+                    deleteSequence(seqID);
+                    $scope.workspace.sequencesLength--;
+                } else {
+                    saveSequence(seq);
+                }
+            }
+            deleteFile(id, ctrl.loadWorkspace);
         }
     }
 
-    ctrl.saveFeature = function() {
+    ctrl.saveSearchAsFeature = function() {
         var feature = {
             ID: $scope.search.name,
             color: $scope.search.color,
@@ -571,9 +722,7 @@ app.controller('AppController', function($scope, $location, $document, $timeout,
             show: true
         }
         $scope.workspace.features[feature.ID] = feature;
-        toucanDB.transaction("features", "readwrite")
-            .objectStore("features")
-            .add(feature);
+        saveFeature(feature);
         for (var seqID in $scope.search.matches) {
             var sequence = $scope.workspace.sequences[seqID];
             var matches = $scope.search.matches[seqID];
@@ -598,14 +747,11 @@ app.controller('AppController', function($scope, $location, $document, $timeout,
                     relativeStart: match.start,
                     score: $scope.search.score,
                     seqID: seqID,
-                    seqNr: sequence.seqNr,
                     source: 'search',
                     strand: match.strand
                 });
             }
-            toucanDB.transaction("sequences", "readwrite")
-                .objectStore("sequences")
-                .put(sequence);
+            saveSequence(sequence);
         }
         $scope.search.matchCount = 0;
         $scope.search.matches = {};
@@ -617,13 +763,13 @@ app.controller('AppController', function($scope, $location, $document, $timeout,
     }
 
     ctrl.saveOptions = function() {
-        toucanDB.transaction("options", "readwrite")
-            .objectStore("options")
-            .put($scope.options);
+        saveOptions($scope.options);
     }
+
 
     ctrl.clearWorkspace = function() {
         if (confirm("Are you sure to delete ALL data from your workspace?")) {
+            $scope.DBRequests++;
             toucanDB.transaction("files", "readwrite")
                 .objectStore("files")
                 .clear()
@@ -640,6 +786,7 @@ app.controller('AppController', function($scope, $location, $document, $timeout,
                                         .objectStore("options")
                                         .clear()
                                         .onsuccess = function(event) {
+                                            $scope.DBRequests--;
                                             $scope.options = angular.copy(optionsDef);
                                             $scope.workspace = angular.copy(workspaceDef);
                                             $scope.workspace.loading = false;
@@ -707,6 +854,80 @@ app.controller('AppController', function($scope, $location, $document, $timeout,
         $timeout(function() {
             $scope.$apply();
         });
+    }
+
+    ctrl.reverseSequence = function(seq) {
+        seq.reverse = !seq.reverse;
+        saveSequence(seq);
+    }
+
+    ctrl.linkUCSC = function (seq) {
+        var link = UCSC.link(seq.assembly, getChrom(seq.genomicChrom), seq.genomicStart, seq.genomicEnd);
+        window.open(link);
+    }
+
+    ctrl.moveSequence = function(seq) {
+        if ($scope.move.moving) {
+            if ($scope.move.seq == seq) {
+                $scope.move.moving = false;
+                $scope.move.seq = null;
+                saveSequence(seq);
+            }
+        } else {
+            $scope.move.seq = seq;
+            $scope.move.moving = true;
+        }
+    }
+
+    ctrl.cutSequencesStart = function() {
+        $scope.cut.cutting = !$scope.cut.cutting;
+        $scope.cut.drag = false;
+    }
+
+    ctrl.cutSequencesDo = function() {
+        $scope.cut.cutting = false;
+        $("#cutModal").modal("hide");
+        $scope.options.longestRegionSize = $scope.cut.end - $scope.cut.start;
+        for (var seqID in $scope.workspace.sequences) {
+            var seq = $scope.workspace.sequences[seqID];
+            seq.regionSize -= $scope.cut.start;
+            if (seq.regionSize > $scope.options.longestRegionSize) seq.regionSize = $scope.options.longestRegionSize;
+            seq.genomicStart += $scope.cut.start;
+            seq.genomicEnd = seq.genomicStart + seq.regionSize;
+            var features = [];
+            for (var f = seq.features.length - 1; f >=0 ; f--) {
+                var feature = seq.features[f];
+                feature.relativeStart -= $scope.cut.start;
+                feature.relativeEnd -= $scope.cut.start;
+                // feature has fallen of left to starting point
+                if (feature.relativeEnd < 0) {
+                    seq.features.splice(f, 1);
+                    continue;
+                }
+                // feature has fallen of right to ending point
+                if (feature.genomicStart > seq.genomicEnd) {
+                    seq.features.splice(f, 1);
+                    continue;
+                }
+                // cut from left side if needed
+                if (feature.relativeStart < 0) {
+                    feature.relativeStart = 0;
+                    feature.genomicStart = seq.genomicStart;
+                }
+                // cut from right side if needed
+                if (feature.genomicEnd > seq.genomicEnd) {
+                    feature.genomicEnd = seq.genomicEnd;
+                    feature.relativeEnd = feature.genomicEnd - seq.genomicStart;
+                }
+                // update region info
+                feature.regionGenomicStart = seq.genomicStart;
+                feature.regionGenomicEnd = seq.genomicEnd;
+                seq.features[f] = feature;
+            }
+            saveSequence(seq);
+        }
+        saveOptions($scope.options);
+        $scope.cut.state = 3;
     }
 
     $("#uploadModal").on("show.bs.modal", function() {

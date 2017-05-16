@@ -6,10 +6,13 @@ angular.module("ToucanJS")
         scope: {
             options : '<',
             workspace: '<',
-            search: '='
+            move: '<',
+            search: '=',
+            cut: '='
         },
         link: function(scope, elem, attr) {
             scope.search.matches = {};
+            var debug = 0;
 
             // drawind custom focus X axis
             var customFocusAxis = function(g) {
@@ -19,18 +22,47 @@ angular.module("ToucanJS")
                 g.selectAll(".tick text").attr("y", focusHeight - scope.options.featureHeight);
             };
 
+            var featureComparator = function (b, a) {
+                var r = (a.relativeEnd - a.relativeStart) - (b.relativeEnd - b.relativeStart);
+                if (r == 0) {
+                    r = a.score - b.score;
+                }
+                return r;
+            }
+
             // resizing the focus scale
             function updateFocusScale() {
+                if (debug) console.log("updateFocusScale");
+
                 // length of sequence
                 focus.selectAll("line.sequence")
+                    .attr("x1", function(d) {
+                        if (scope.move.moving && scope.move.seq.seqID == d.seqID) {
+                            d.translate = scope.move.seq.translate;
+                        }
+                        if (!d.translate) d.translate = 0;
+                        return parseInt(focusXScale(d.translate));
+                    })
                     .attr("x2", function(d) {
-                        return parseInt(focusXScale(d.regionSize));
+                        if (scope.move.moving && scope.move.seq.seqID == d.seqID) {
+                            d.translate = scope.move.seq.translate;
+                        }
+                        if (!d.translate) d.translate = 0;
+                        return parseInt(focusXScale(d.translate + d.regionSize));
                     });
 
                 // length and position of feature
                 focus.selectAll("rect.feature")
                     .attr("x", function(d) {
-                        return parseInt(focusXScale(d.relativeStart));
+                        var sequence = d3.select(this.parentNode).datum();
+                        if (!sequence.translate) sequence.translate = 0;
+                        var x = 0;
+                        if (sequence.reverse)  {
+                            x = parseInt(focusXScale(sequence.translate + sequence.regionSize - d.relativeEnd));
+                        } else {
+                            x = parseInt(focusXScale(sequence.translate + d.relativeStart));
+                        }
+                        return x;
                     })
                     .attr("width", function(d) {
                         return parseInt(focusXScale(d.relativeEnd) - focusXScale(d.relativeStart));
@@ -39,11 +71,27 @@ angular.module("ToucanJS")
                 // lenght and position of searched motifs
                 focus.selectAll("rect.search")
                     .attr("x", function(d) {
-                        return parseInt(focusXScale(d.start));
+                        var sequence = d3.select(this.parentNode).datum()
+                        if (sequence.reverse)  {
+                            return parseInt(focusXScale(sequence.translate + sequence.regionSize - d.start));
+                        }
+                        return parseInt(focusXScale(sequence.translate + d.start));
                     })
                     .attr("width", function(d) {
                         return parseInt(focusXScale(d.end) - focusXScale(d.start));
                     });
+
+                focus.selectAll("rect.cut")
+                    .attr("x", scope.cut.start < scope.cut.end ? focusXScale(scope.cut.start) : focusXScale(scope.cut.end))
+                    .attr("width", scope.cut.start < scope.cut.end ? focusXScale(scope.cut.end) - focusXScale(scope.cut.start) : focusXScale(scope.cut.start) - focusXScale(scope.cut.end));
+
+                if (scope.move.moving) {
+                    if (!scope.move.seq.translate) scope.move.seq.translate = 0;
+                    focus.selectAll("rect.highlight")
+                        .attr("x", focusXScale(scope.move.seq.translate))
+                        .attr("width", parseInt(focusXScale(scope.move.seq.regionSize + scope.move.seq.translate) - focusXScale(scope.move.seq.translate)));
+                }
+
                 scope.updatePositioning();
             }
 
@@ -51,6 +99,9 @@ angular.module("ToucanJS")
             function brushedX() {
                 // ignore brush-by-zoom
                 if (d3.event && d3.event.sourceEvent && d3.event.sourceEvent.type === "zoom") return;
+
+                if (debug) console.log("brushedX");
+
                 // select area
                 var s = d3.event ? d3.event.selection || contextXScale.range() : contextXScale.range();
                 // update focus scale domain
@@ -72,6 +123,9 @@ angular.module("ToucanJS")
             function brushedY() {
                 // ignore brush-by-zoom
                 if (d3.event && d3.event.sourceEvent && d3.event.sourceEvent.type === "zoom") return;
+
+                if (debug) console.log("brushedY");
+
                 // select area
                 var s = d3.event ? d3.event.selection || contextYScale.range() : contextYScale.range();
                 // update focus scale domain
@@ -95,6 +149,8 @@ angular.module("ToucanJS")
                 var mouseEvent = d3.event.sourceEvent;
                 if (mouseEvent && mouseEvent.type === "brush") return;
                 if (mouseEvent && mouseEvent.type === "end") return;
+                if (scope.cut.cutting && scope.cut.state == 1) return updateCutPosition(mouseEvent ? mouseEvent.target : null);
+                if (debug) console.log("zoomed");
 
                 // source transform
                 var t = d3.event.transform;
@@ -116,6 +172,8 @@ angular.module("ToucanJS")
 
             // handling changes to options object
             scope.updateDimensions = function() {
+                if (debug) console.log("updateDimensions");
+
                 // get the parent width
                 width = elem.parent().width();
                 if (!width) return;
@@ -158,12 +216,13 @@ angular.module("ToucanJS")
                 // update the scales
                 focusXScale.range([0, width]);
                 focusYScale.range([scope.options.featureHeight, focusHeight - scope.options.featureHeight]);
-                scoreScale.range([0, scope.options.featureHeight]);
+                var t = d3.zoomTransform(zoomRect.node());
+                scoreScale.range([0, t.scale(scope.options.featureHeight).ky]);
                 contextXScale.range([0, width]);
                 contextYScale.range([0, focusHeight]);
                 brushX.extent([[0, 0], [width, contextHeight]]);
                 brushY.extent([[0, 0], [contextHeight, focusHeight]]);
-                zoom.translateExtent([[0, 0], [width, focusHeight]])
+                zoom.translateExtent([[0, -10], [width, focusHeight+10]])
                     .extent([[0, 0], [width, focusHeight]]);
                 focusXAxis.ticks(scope.options.numberOfTicks)
                     .tickSize(focusHeight);
@@ -201,6 +260,8 @@ angular.module("ToucanJS")
             }
 
             scope.updatePositioning = function() {
+                if (debug) console.log("updatePositioning");
+
                 // update sequence name positions
                 names.selectAll("text.name")
                     .attr("dy", function(d, i) {
@@ -208,8 +269,7 @@ angular.module("ToucanJS")
                     });
 
                 // update sequence line position
-                focus.selectAll("g.sequence")
-                    .selectAll("line.sequence")
+                focus.selectAll("line.sequence")
                     .attr("y1", function(d) {
                         return parseInt(focusYScale(d.seqNr));
                     })
@@ -220,29 +280,39 @@ angular.module("ToucanJS")
                 // update sequence feature dimensions and position
                 focus.selectAll("rect.feature")
                     .attr("y", function(d) {
-                        if (d.strand == '+')
+                        var reverse = d3.select(this.parentNode).datum().reverse;
+                        if ((!reverse && d.strand == '+') || (reverse && d.strand == '-'))
                             return parseInt(focusYScale(d.seqNr) - scoreScale(d.score))
                         else
                             return parseInt(focusYScale(d.seqNr))
                     })
                     .attr("height", function(d) {
                         return scoreScale(d.score);
-                    })
+                    });
+
+                if (scope.move.moving){
+                    focus.selectAll("rect.highlight")
+                        .attr("y", focusYScale(scope.sequencePositions[scope.move.seq.seqID]) - scoreScale(scope.options.maxScore))
+                        .attr("height", 2*scoreScale(scope.options.maxScore));
+                }
 
                 // update searched motifs dimensions and position
                 focus.selectAll("rect.search")
                     .attr("y", function(d) {
-                        if (d.strand == '+')
+                        var reverse = d3.select(this.parentNode).datum().reverse;
+                        if ((!reverse && d.strand == '+') || (reverse && d.strand == '-'))
                             return parseInt(focusYScale(d.seqNr) - scoreScale(scope.search.score))
                         else
                             return parseInt(focusYScale(d.seqNr))
                     })
                     .attr("height", function(d) {
                         return scoreScale(scope.search.score);
-                    })
+                    });
             }
 
             scope.highlightSearch = function() {
+                if (debug) console.log("highlightSearch");
+
                 var foundFeatures = focus.selectAll("g.sequence")
                     .selectAll("rect.search")
                     .data(function(d) {
@@ -261,36 +331,51 @@ angular.module("ToucanJS")
                 updateFocusScale();
                 // TODO: hack to refresh sequence features on save
                 if (scope.search.matchCount == 0) {
-                    focus.selectAll("g.sequence").remove();
-                    scope.updateSequences();
+                    //focus.selectAll("g.sequence").remove();
+                    //scope.updateSequences();
                 }
             }
 
             scope.updateStrokeAndFill = function() {
+                if (debug) console.log("updateStrokeAndFill");
+
                 names.selectAll("text.name")
                     .attr("fill", function(d) {
                         if (scope.search.matches[d.seqID] && scope.search.matches[d.seqID].length) return scope.options.sequenceFoundColor;
                         if (d.DNAsequence.length) return scope.options.sequenceDownloadedColor;
                         return scope.options.sequenceNameColor;
+                    })
+                    .attr("visibility", function(d) {
+                        return d.show ? "visible" : "hidden";
                     });
-                // update sequnce line color
+
+                focus.selectAll("g.sequence")
+                    .attr("visibility", function(d) {
+                        return d.show ? "visible" : "hidden";
+                    });
+
+                // update sequence line color
                 focus.selectAll("g.sequence")
                     .attr("stroke", scope.options.sequenceColor)
-                    .attr("stroke-width", scope.options.sequenceWidth)
+                    .attr("stroke-width", scope.options.sequenceWidth);
 
                 // update seuence feature colors
                 focus.selectAll("rect.feature")
                     .attr("fill", function(d) {
-                        return scope.workspace.features[d.featureID].color;
+                        return scope.workspace.features[d.featureID] ? scope.workspace.features[d.featureID].color : 'black';
                     })
                     .attr("fill-opacity", function(d) {
-                        return scope.workspace.features[d.featureID].opacity;
+                        return scope.workspace.features[d.featureID] ? scope.workspace.features[d.featureID].opacity : 1;
                     })
                     .attr("stroke", scope.options.featureStrokeColor)
                     .attr("stroke-width", scope.options.featureStrokeWidth)
                     .attr("stroke-opacity", scope.options.featureStrokeOpacity)
                     .attr("visibility", function(d) {
-                        return scope.workspace.features[d.featureID].show ? 'visible' : 'hidden';
+                        var sequence = d3.select(this.parentNode).datum();
+                        var show = scope.workspace.features[d.featureID] ? scope.workspace.features[d.featureID].show : false;
+                        show = show && sequence.show;
+                        if (scope.workspace.files[d.fileID]) show = show && scope.workspace.files[d.fileID].show;
+                        return show ? 'visible' : 'hidden';
                     });
 
                 focus.selectAll("rect.search")
@@ -305,9 +390,36 @@ angular.module("ToucanJS")
                     .attr("stroke-opacity", scope.options.featureStrokeOpacity);
             }
 
+            scope.moveSequence = function() {
+                if (debug) console.log("moveSequence");
+
+                focus.selectAll("rect.highlight")
+                    .attr("visibility", scope.move.moving ? 'visible' : 'hidden');
+                updateFocusScale();
+                scope.updatePositioning();
+            }
+
+            scope.cutSequence = function() {
+                if (debug) console.log("cutSequence");
+
+                if (scope.cut.state == 3) {
+                    //focus.selectAll("g.sequence").remove();
+                    //scope.updateSequences();
+                    scope.cut.state = 0;
+                }
+                if (scope.cut.cutting) {
+                    svg.selectAll("rect.zoom")
+                        .classed("cutting", true);
+                } else {
+                    svg.selectAll("rect.zoom")
+                        .classed("cutting", false);
+                }
+            }
+
             // handling changes to feature object
             scope.updateSequences = function() {
                 if (scope.workspace.sequencesLength == 0) return;
+                if (debug) console.log("updateSequences");
 
                 // update scale domains
                 focusYScale.domain([0, scope.workspace.sequencesLength]);
@@ -322,93 +434,100 @@ angular.module("ToucanJS")
                     .call(contextYAxis);
                 updateFocusScale();
 
+                // get sequences
+                var seqs = Object.values(angular.copy(scope.workspace.sequences));
+                scope.sequencePositions = {};
+                seqs.forEach(function(s, i) {
+                    s.seqNr = i;
+                    scope.sequencePositions[s.seqID] = s.seqNr;
+                    s.features.forEach(function(f) {
+                        f.seqNr = s.seqNr;
+                    });
+                    s.features = s.features.sort(featureComparator);
+                });
+
                 // process changes to sequence names block
                 var name = names.selectAll("text.name")
-                   .data(Object.values(scope.workspace.sequences));
+                   .data(seqs);
 
-                // foreach added seqence add name
+                // foreach added sequence add name
                 name.enter()
                     .append("text")
-                    .attr("class", "name")
-                    .text(function(d) {
-                        return d.seqID;
-                    });
+                    .attr("class", "name");
 
                 // foreach removed sequence remove the name
-                name.exit().remove();
+                name.exit()
+                    .remove();
+
+                // update text
+                names.selectAll("text.name").text(function(d) {
+                    return d.seqID;
+                });
 
                 // process changes to focus block
                 var sequence = focus.selectAll("g.sequence")
-                    .data(function() {
-                        var seqs = Object.values(scope.workspace.sequences);
-                        seqs.forEach(function(s, i) {
-                            s.seqNr = i;
-                        });
-                        return seqs;
-                    });
+                    .data(seqs);
 
                 // foreach added sequence add group
-                var sequenceAdded = sequence.enter()
+                sequence.enter()
                     .append("g")
                     .attr("class", "sequence");
+                sequence.exit()
+                    .remove();
 
-                // foreach added sequence append a sequence line
-                sequenceAdded.append("line")
-                    .attr("class", "sequence")
-                    .attr("x1", 0);
-
-                var comparator = function (b, a) {
-                    var r = (a.relativeEnd - a.relativeStart) - (b.relativeEnd - b.relativeStart);
-                    if (r == 0) {
-                        r = a.score - b.score;
-                    }
-                    return r;
-                }
-
-                // foreach added sequence draw sequence features
-                sequenceAdded.selectAll("rect.feature")
-                    .data(function(d, i) {
-                        d.features.forEach(function(f) {
-                            f.seqNr = d.seqNr;
-                        });
-                        return d.features.sort(comparator);
-                    })
-                    .enter()
-                    .append("rect")
-                    .attr("class","feature")
-                    // foreach added sequence add hover tooltip
-                    .append("title")
-                    .text(function(d) {
-                        var tooltip = 'Feature ID: ' + d.featureID;
-                        tooltip += '\nScore: ' + d.score.toString();
-                        tooltip += '\nRelative start: ' + d.relativeStart.toString();
-                        tooltip += '\nRelative end: ' + d.relativeEnd.toString();
-                        if ('genomicChrom' in d) {
-                            tooltip += '\nGenomic chromosome: ' + d.genomicChrom.toString();
-                            tooltip += '\nGenomic start: ' + d.genomicStart.toString();
-                            tooltip += '\nGenomic end: ' + d.genomicEnd.toString();
-                        }
-                        tooltip += '\nStrand: ' + d.strand;
-                        tooltip += '\nPhase: ' + d.phase;
-                        tooltip += '\nSeqID: ' + d.seqID;
-                        tooltip += '\nSource: ' + d.source;
-                        tooltip += '\nGene: ' + d.gene;
-                        tooltip += '\nFeature type: ' + d.featureType;
-                        for (var attributeID in d.attributes) {
-                            tooltip += '\n' + attributeID + ': ' + d.attributes[attributeID];
-                        }
-                        return tooltip;
+                focus.selectAll("g.sequence")
+                    .attr("seqID", function(d) {
+                        return (d.seqID);
                     });
 
-                var sequenceRemoved = sequence.exit()
-                    .remove();
-                // foreach removed sequence remove sequnce line
-                sequenceRemoved.selectAll("line.sequence")
-                    .remove();
+                seqs.forEach(function(s){
+                    // TODO: not valid selector
+                    var group = focus.selectAll("g.sequence[seqID='"+(s.seqID)+"']");
 
-                // foreach updated sequence remove sequnce features
-                sequenceRemoved.selectAll("rect.feature")
-                    .remove();
+                    // foreach added sequence append a sequence line
+                    var line = group.selectAll("line.sequence")
+                        .data([s]);
+                    line.enter()
+                        .append("line")
+                        .attr("class", "sequence");
+                    line.exit().remove();
+
+                    // foreach added sequence draw sequence features
+                    var features = group
+                        .selectAll("rect.feature")
+                        .data(s.features);
+                    features.enter()
+                        .append("rect")
+                        .attr("class","feature")
+                        .append("title");
+
+                    // foreach added sequence add hover tooltip
+                    // TODO: this is not updated after seq has been removed
+                    group.selectAll("rect.feature")
+                        .selectAll("title")
+                        .text(function(d) {
+                            var tooltip = 'Feature ID: ' + d.featureID;
+                            tooltip += '\nScore: ' + d.score.toString();
+                            tooltip += '\nRelative start: ' + d.relativeStart.toString();
+                            tooltip += '\nRelative end: ' + d.relativeEnd.toString();
+                            if ('genomicChrom' in d) {
+                                tooltip += '\nGenomic chromosome: ' + d.genomicChrom.toString();
+                                tooltip += '\nGenomic start: ' + d.genomicStart.toString();
+                                tooltip += '\nGenomic end: ' + d.genomicEnd.toString();
+                            }
+                            tooltip += '\nStrand: ' + d.strand;
+                            tooltip += '\nPhase: ' + d.phase;
+                            tooltip += '\nSeqID: ' + d.seqID;
+                            tooltip += '\nSource: ' + d.source;
+                            tooltip += '\nGene: ' + d.gene;
+                            tooltip += '\nFeature type: ' + d.featureType;
+                            for (var attributeID in d.attributes) {
+                                tooltip += '\n' + attributeID + ': ' + d.attributes[attributeID];
+                            }
+                            return tooltip;
+                        });
+                    features.exit().remove();
+                });
 
                 contextX.select("g.brushX")
                     .call(brushX.move, [0, width]);
@@ -447,7 +566,7 @@ angular.module("ToucanJS")
             var zoom            = d3.zoom()
                                     .scaleExtent([1, Infinity])
                                     .scaleLock(function() {
-                                        return [d3.event.altKey, d3.event.ctrlKey];
+                                        return [d3.event ? d3.event.altKey : false, d3.event ? d3.event.ctrlKey : false];
                                     })
                                     .on("zoom", zoomed);
 
@@ -464,10 +583,59 @@ angular.module("ToucanJS")
                 .attr("x", 0)
                 .attr("y", 0);
 
+            var updateCutPosition = function(target) {
+                if (scope.cut.cutting && scope.cut.state == 1) {
+                    if (debug) console.log("updateCutPosition");
+                    var coords = d3.mouse(target ? target : this);
+                    if (scope.cut.drag && !target) return toggleCut();
+                    if (target) scope.cut.drag = true;
+                    scope.cut.endX = coords[0];
+                    scope.cut.end = focusXScale.invert(scope.cut.endX);
+                    focus.selectAll("rect.cut")
+                        .attr("x", scope.cut.startX < scope.cut.endX ? scope.cut.startX : scope.cut.endX)
+                        .attr("width", scope.cut.startX < scope.cut.endX ? scope.cut.endX - scope.cut.startX : scope.cut.startX - scope.cut.endX);
+                }
+            }
+
+            var toggleCut = function() {
+                if (scope.cut.cutting) {
+                    if (debug) console.log("toggleCut");
+                    if (scope.cut.state == 0 || scope.cut.state == 2) {
+                        var coords = d3.mouse(this);
+                        scope.cut.startX = coords[0];
+                        focus.selectAll("rect.cut")
+                            .attr("x", scope.cut.startX)
+                            .attr("y", 0)
+                            .attr("height", focusHeight)
+                            .attr("visibility", "visible");
+                        scope.cut.state = 1;
+                        scope.cut.start = focusXScale.invert(scope.cut.startX);
+                    } else if (scope.cut.state == 1) {
+                        scope.cut.state = 2;
+                        scope.cut.start = parseInt(scope.cut.start);
+                        scope.cut.end = parseInt(scope.cut.end);
+                        if (scope.cut.start > scope.cut.end) {
+                            var e = scope.cut.end;
+                            scope.cut.end = scope.cut.start;
+                            scope.cut.start = e;
+                        }
+                        scope.$apply();
+                        $("#cutModal").modal('show');
+                        focus.selectAll("rect.cut")
+                            .attr("visibility", "hidden")
+                            .attr("x", 0)
+                            .attr("width", 0);
+                    }
+                }
+            }
+
             // add focus zoom rect
-            svg.append("rect")
+            var zoomRect = svg.append("rect")
                 .attr("class", "zoom")
+                .on("mousedown", toggleCut)
+                .on("mousemove", updateCutPosition)
                 .call(zoom);
+
 
             // define a group for sequence names
             var names = svg.append("g")
@@ -503,27 +671,48 @@ angular.module("ToucanJS")
             contextY.append("g")
                 .attr("class", "brushY");
 
+            focus.append("rect")
+                .attr("class", "highlight")
+                .attr("fill", "yellow")
+                .attr("fill-opacity", 0.5)
+                .call(d3.drag().on("drag", function() {
+                    scope.move.seq.translate += parseInt(d3.event.dx * (focusXScale.domain()[1] - focusXScale.domain()[0]) / width);
+                    updateFocusScale();
+                }));
+
+            focus.append("rect")
+                .attr("class", "cut")
+                .attr("fill", "yellow")
+                .attr("fill-opacity", 0.5)
+                .attr("visibility","hidden")
+                .on("mousedown", toggleCut)
+                .on("mousemove", updateCutPosition);
 
             // handling attr changes
-            /*
-            scope.$watch('workspace.sequences', function() {
-                scope.updateDimensions();
-                scope.updateSequences();
-                scope.updateStrokeAndFill();
-            }, true);
-            */
             scope.$watch('workspace', function() {
                 if (!scope.workspace.sequencesLength) return;
+                if (debug) console.log("watch workspace");
                 scope.updateDimensions();
                 scope.updateSequences();
                 scope.updateStrokeAndFill();
             }, true);
             scope.$watch('search', function() {
+                if (debug) console.log("watch search");
                 scope.highlightSearch();
             }, true);
+            scope.$watch('move', function() {
+                if (debug) console.log("watch move");
+                scope.moveSequence();
+            }, true);
+            scope.$watch('cut', function() {
+                if (debug) console.log("watch cut");
+                scope.cutSequence();
+            }, true);
             scope.$watch('options', function() {
+                if (debug) console.log("watch options");
+                scope.updateStrokeAndFill();
                 scope.updateDimensions();
-                scope.updatePositioning();
+                updateFocusScale();
             }, true);
         }
     };

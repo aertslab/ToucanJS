@@ -5,6 +5,7 @@
     <link rel="stylesheet" href="assets/libs/bootstrap-colorpicker/css/bootstrap-colorpicker.min.css">
     <link rel="stylesheet" href="assets/libs/bootstrap-material-design/css/bootstrap-material-design.min.css" type="text/css">
     <link rel="stylesheet" href="assets/libs/bootstrap-material-design/css/ripples.min.css" type="text/css">
+    <link rel="stylesheet" href="assets/libs/animate/animate.css" type="text/css">
     <link rel="stylesheet" href="assets/css/vib.css" type="text/css">
     <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/icon?family=Material+Icons">
     <script type="text/javascript" src="assets/libs/jquery/jquery-3.2.1.min.js"></script>
@@ -14,6 +15,7 @@
     <script type="text/javascript" src="assets/libs/bootstrap-material-design/js/material.min.js"></script>
     <script type="text/javascript" src="assets/libs/bootstrap-material-design/js/ripples.min.js"></script>
     <script type="text/javascript" src="assets/libs/spinjs/spin.min.js"></script>
+    <script type="text/javascript" src="assets/libs/polyfills/object.js"></script>
     <link rel="stylesheet" type="text/css" href="assets/libs/igv.js/igv-1.0.7.css">
     <script type="text/javascript" src="assets/libs/igv.js/igv-1.0.7.js"></script>
 
@@ -24,11 +26,15 @@
     <script type="text/javascript" src="assets/libs/d3/d3-v4.2.0-alt.js"></script>
     <script type="text/javascript" src="assets/libs/randomColor/randomColor.js"></script>
     <script type="text/javascript" src="assets/libs/modernizr/modernizr.js"></script>
+    <script type="text/javascript" src="assets/libs/md5/md5.js"></script>
     <title>
         ToucanJS
     </title>
 </head>
 <body data-ng-app="ToucanJS" data-ng-controller="AppController as ctrl">
+    <div id="indicatorDB" ng-show="DBRequests > 0">
+        <i class="animated infinite pulse material-icons red" title="Database in use. Running {{DBRequests}} transactions.">save</i>
+    </div>
     <div class="container" id="top">
         <div class="navbar navbar-default">
             <div class="container-fluid">
@@ -44,9 +50,7 @@
                     <ul class="nav navbar-nav navbar-right">
                         <li><a class="pointer" data-toggle="modal" data-target="#uploadModal">Upload</a></li>
                         <li><a class="pointer" data-toggle="offcanvas" data-target="#filesOffcanvas">Files</a></li>
-                        <!--
                         <li><a class="pointer" data-toggle="offcanvas" data-target="#sequencesOffcanvas">Regions</a></li>
-                        -->
                         <li><a class="pointer" data-toggle="offcanvas" data-target="#featuresOffcanvas">Features</a></li>
                         <li><a class="pointer" data-toggle="offcanvas" data-target="#searchOffcanvas">Search</a></li>
                         <li><a class="pointer" data-toggle="offcanvas" data-target="#optionsOffcanvas">Options</a></li>
@@ -80,56 +84,82 @@
                                 Your workspace is empty. Please upload a file.
                             </span>
                             <span data-ng-if="!workspace.loading && workspace.sequencesLength != 0">
-                                Loaded {{workspace.sequencesLength}} regions from {{workspace.filesLength}} files
+                                Loaded {{workspace.sequenceFeaturesLength}} features for {{workspace.sequencesLength}} regions from {{workspace.filesLength}} files
+                                <a class="pointer pull-right" title="Cut regions" data-ng-click="ctrl.cutSequencesStart()" ng-class="{hiddenFeature: !cut.cutting}"><i class="material-icons">content_cut</i></a>
                             </span>
                         </div>
-                        <visualization data-ng-show="workspace.sequencesLength != 0" options="options" workspace="workspace" search="search">
+                        <visualization data-ng-show="workspace.sequencesLength != 0" options="options" workspace="workspace" search="search" move="move" cut="cut">
                         </visualization>
                     </div>
                 </div>
             </div>
             <offcanvas id="filesOffcanvas">
                 <div class="panel panel-primary">
-                    <div class="panel-body">
+                    <div class="panel-body" style="height: {{options.height+50}}px">
                         <h5><b>Files</b></h5>
-                        <span data-ng-repeat="file in workspace.files"><a class="pointer" title="Remove this file" data-ng-click="ctrl.removeFile(file.ID)"><i class="material-icons">remove_circle</i></a>{{file.name}}<br /></span>
-                        <a class="pointer" title="Upload new file" data-toggle="modal" data-target="#uploadModal"><i class="material-icons">add_circle</i>upload new file</a>
+                        <ul>
+                            <li data-ng-repeat="file in workspace.files">
+                                <span class="">{{file.name}}</span>
+                                <span class="pull-right">
+                                    <a class="featureToggle pointer" ng-class="{hiddenFeature: !file.show}" title="Hide / show features from this file" data-ng-click="ctrl.toggleFile(file)"><i class="material-icons">remove_red_eye</i></a>
+                                    <a class="pointer" title="Remove this file" data-ng-click="ctrl.removeFile(file.ID)"><i class="material-icons">remove_circle</i></a>
+                                </span>
+                                <div class="clearfix"></div>
+                            </li>
+                        </ul>
+                        <span data-ng-if="workspace.filesLength == 0">No files loaded</span>
                     </div>
                 </div>
             </offcanvas>
             <offcanvas id="sequencesOffcanvas">
                 <div class="panel panel-primary">
-                    <div class="panel-body">
+                    <div class="panel-body" style="height: {{options.height+50}}px">
                         <h5><b>Regions</b></h5>
-                        <span data-ng-repeat="sequence in workspace.sequences"><a class="pointer" title="Remove this sequence" data-ng-click="ctrl.removeSequence(file.ID)"><i class="material-icons">remove_circle</i></a>{{sequence.seqID}}<br /></span>
-                        <a class="pointer" title="Upload new file" data-toggle="modal" data-target="#uploadModal"><i class="material-icons">add_circle</i>upload new file</a>
+                        <ul>
+                            <li data-ng-repeat="sequence in workspace.sequences">
+                                <span class="">{{sequence.seqID}}</span>
+                                <span class="pull-right">
+                                    <a class="featureToggle pointer" ng-class="{hiddenFeature: !sequence.show}" title="Hide / show this region" data-ng-click="ctrl.toggleSequence(sequence)"><i class="material-icons">remove_red_eye</i></a>
+                                    <a class="pointer" ng-class="{hiddenFeature: !sequence.reverse}" title="Reverse compliment this sequence" data-ng-click="ctrl.reverseSequence(sequence)"><i class="material-icons">compare_arrows</i></a>
+                                    <a class="pointer" title="Move this sequence" data-ng-click="ctrl.moveSequence(sequence)" ng-class="{hiddenFeature: (move.moving) && (move.seq != sequence)}"><i class="material-icons">open_with</i></a>
+                                    <a class="pointer" title="Link to UCSC" data-ng-click="ctrl.linkUCSC(sequence)"><i class="material-icons">launch</i></a><a class="pointer" title="Remove this region" data-ng-click="ctrl.removeSequence(sequence.seqID)"><i class="material-icons">remove_circle</i></a>
+                                </span>
+                                <div class="clearfix"></div>
+                            </li>
+                        </ul>
+                        <span data-ng-if="workspace.sequencesLength == 0">No regions loaded</span>
                     </div>
                 </div>
             </offcanvas>
             <offcanvas id="featuresOffcanvas">
                 <div class="panel panel-primary">
-                    <div class="panel-body">
+                    <div class="panel-body" style="height: {{options.height}}px">
                         <h5><b>Features</b></h5>
-                        <span data-ng-repeat="feature in workspace.features track by $index | orderObjectBy: 'ID'" style="color: {{feature.color}}">
-                            <a id="toggle-{{feature.ID}}" class="featureToggle pointer" ng-class="{hiddenFeature: !feature.show}" title="Hide / show this feature" data-ng-click="ctrl.toggleFeature(feature)"><i class="material-icons">remove_red_eye</i></a>
-                            <a id="color-{{feature.ID}}" class="featureColor pointer" ng-class="{hiddenFeature: !feature.show}" title="Color this feature" data-ng-click="ctrl.colorFeature(feature)"><i class="material-icons">invert_colors</i></a>
-                            {{feature.ID}}
-                            <br />
-                        </span>
+                        <ul>
+                            <li data-ng-repeat="feature in workspace.features track by $index | orderObjectBy: 'ID'" style="color: {{feature.color}}">
+                                <span class="">{{feature.ID}}</span>
+                                <span class="pull-right">
+                                    <a class="featureToggle pointer" ng-class="{hiddenFeature: !feature.show}" title="Hide / show this feature" data-ng-click="ctrl.toggleFeature(feature)"><i class="material-icons">remove_red_eye</i></a>
+                                    <a id="color-{{escapeID(feature.ID)}}" class="featureColor pointer" ng-class="{hiddenFeature: !feature.show}" title="Color this feature" data-ng-click="ctrl.colorFeature(feature)"><i class="material-icons">invert_colors</i></a>
+                                    <a class="pointer" title="Remove this feature" data-ng-click="ctrl.removeFeature(feature.ID)"><i class="material-icons">remove_circle</i></a>
+                                </span>
+                                <div class="clearfix"></div>
+                            </li>
+                        </ul>
                         <span data-ng-if="workspace.sequencesLength == 0">No features loaded</span>
                     </div>
                 </div>
             </offcanvas>
             <offcanvas id="searchOffcanvas">
                 <div class="panel panel-primary">
-                    <div class="panel-body">
+                    <div class="panel-body" style="height: {{options.height+50}}px">
                         <h5><b>Search</b></h5>
                         <form class="form-horizontal" id="searchForm" name="searchForm">
                             <fieldset>
                                 <div class="form-group">
                                     <label for="file" class="col-md-4 control-label">RegExp</label>
                                     <div class="col-md-8">
-                                        <input class="form-control" ng-model="search.regexp" required ng-change="ctrl.searchFeatures()" />
+                                        <input class="form-control" ng-model="search.regexp" required ng-change="ctrl.searchFeatures()" ng-disabled="workspace.sequencesLoaded == 0" />
                                     </div>
                                 </div>
                                 <div class="form-group">
@@ -154,11 +184,12 @@
                                 <div class="text-right">
                                     <br />
                                     Available {{workspace.sequencesLoaded}} / {{workspace.sequencesLength}} DNA sequences
-                                    <div ng-if="!search.invalid">Found {{search.matchCount}} matches</div>
+                                    <div ng-if="workspace.sequencesLoaded !=0 && !search.limit && !search.invalid">Found {{search.matchCount}} matches</div>
                                     <div ng-if="search.invalid" class="red">Invalid regexp</div>
                                     <div ng-if="search.limit" class="red">Search limit reached!</div>
+                                    <div ng-if="workspace.sequencesLoaded == 0" class="red">No sequences available!</div>
                                     <br />
-                                    <button class="btn btn-default" type="submit" ng-disabled="search.matches == 0 || search.limit" ng-click="searchForm.$valid && ctrl.saveFeature()">Save</button>
+                                    <button class="btn btn-default" type="submit" ng-disabled="workspace.sequencesLoaded == 0 || search.matches == 0 || search.limit" ng-click="searchForm.$valid && ctrl.saveSearchAsFeature()">Save</button>
                                 </div>
                             </fieldset>
                         </form>
@@ -167,7 +198,7 @@
             </offcanvas>
             <offcanvas id="optionsOffcanvas">
                 <div class="panel panel-primary">
-                    <div class="panel-body">
+                    <div class="panel-body" style="height: {{options.height+50}}px">
                         <h5><b>Options</b></h5>
                         <form class="form-horizontal text-right">
                             <fieldset>
@@ -293,6 +324,7 @@
                             <input type="file" id="GFFfile" name="GFFfile" multiple>
                         </div>
                     </div>
+                    <!--
                     <div class="form-group">
                         <label for="BEDfile" class="col-md-3 control-label"> BED file(s)</label>
                         <div class="col-md-9">
@@ -307,6 +339,7 @@
                             <input type="file" id="bigWigFile" name="bigWigFile" multiple>
                         </div>
                     </div>
+                    -->
                 </fieldset>
             </form>
             {{message}}
@@ -342,10 +375,9 @@
           </div>
           <div class="modal-body">
           <h4>Description</h4>
-            TOUCAN is a workbench for regulatory sequence analysis on metazoan genomes: comparative genomics, detection of significant transcription factor binding sites, and detection of cis-regulatory modules (combinations of binding sites) in sets of coexpressed/coregulated genes. It is a platform independent, standalone Java application that is tightly linked with Ensembl, and was built using the BioJava package. SOAP web services are used to remotely access multiple algorithms for comparative genomics, motif detection, and module detection.
+            TOUCAN is a workbench for regulatory sequence analysis on metazoan genomes: comparative genomics, detection of significant transcription factor binding sites, and detection of cis-regulatory modules (combinations of binding sites) in sets of coexpressed/coregulated genes. It is a platform independent, standalone web tool that is tightly linked with Ensembl, and was built using the AngularJS package. RESTful web services are used to remotely access multiple algorithms for comparative genomics, motif detection, and module detection.
             <h4>Documentation</h4>
             The manual of older versions is <a href="http://gbiomed.kuleuven.be/apps/lcb/toucan/help/index.htm">here</a>.<br />
-            Herbert Mayer has evaluated TOUCAN for Bioinformatics World and has added some useful comments <a href="http://homepage.univie.ac.at/herbert.mayer/MainGEN.html#TOUCAN">here</a>.
             <h4>References</h4>
             <ul>
                 <li>
@@ -359,6 +391,36 @@
                     Nucl Acids Res, vol. 33 (Web Server issue), W393-6.
                 </li>
             </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal fade" id="cutModal">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+            <h4 class="modal-title">Restrict view</h4>
+          </div>
+          <div class="modal-body">
+            Do you want to restrict the view to the selected region ?<br /><br />
+            <fieldset>
+                <div class="form-group">
+                    <label for="cutStart" class="col-md-3 control-label">Start</label>
+                    <div class="col-md-9">
+                        <input name="cutStart" type="number" class="form-control" ng-model="cut.start" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="cutStop" class="col-md-3 control-label">Stop</label>
+                    <div class="col-md-9">
+                        <input name="cutStop" type="number" class="form-control" ng-model="cut.end" />
+                    </div>
+                </div>
+            </fieldset>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-ng-click="ctrl.cutSequencesDo()">Cut</button>
           </div>
         </div>
       </div>

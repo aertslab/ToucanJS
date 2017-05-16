@@ -13,7 +13,8 @@ angular.module("ToucanJS")
                 var dsns = xmlDoc.getElementsByTagName("DSN");
                 for (var i = 0; i < dsns.length; i++) {
                     var dsn = dsns[i];
-                    assemblies.push(dsn.getElementsByTagName("SOURCE")[0].id);
+                    var dsnSource = dsn.getElementsByTagName("SOURCE");
+                    assemblies.push(dsnSource[0].getAttribute('id'));
                 }
                 resolve(assemblies);
             }).then(function(response){
@@ -27,14 +28,14 @@ angular.module("ToucanJS")
             start = parseInt(start);
             end = parseInt(end);
             if (!assembly || !chr || !start || !end) {
-                reject("Invalid arguments");
+                reject("Invalid arguments (assembly: " + assembly + ", chr: " + chr + ", start: " + start + ", end: "+end+")");
             } else {
                 $http.get(ucsc.das + assembly + "/dna?segment="+chr+":"+start+","+end).then(function(response) {
                     var sequence = "";
                     var parser = new DOMParser();
                     var xmlDoc = parser.parseFromString(response.data, "text/xml");
                     var dna = xmlDoc.getElementsByTagName("DNA")[0];
-                    if (!dna) {
+                    if (!dna || !dna.childNodes[0]) {
                         reject("Empty DNA sequence");
                     } else {
                         resolve(dna.childNodes[0].nodeValue.replace(/\s+/ig,""));
@@ -44,6 +45,10 @@ angular.module("ToucanJS")
                 });
             }
         });
+    };
+
+    ucsc.link = function(assembly, chrom, start, end) {
+        return 'http://genome-euro.ucsc.edu/cgi-bin/hgTracks?db='+assembly+'&position='+chrom+':'+start+'-'+end;
     };
 
     return ucsc;
