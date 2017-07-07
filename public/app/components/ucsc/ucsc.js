@@ -1,7 +1,8 @@
 angular.module("ToucanJS")
 .factory('UCSC', function($http, $q) {
     var ucsc = {
-        das: "http://genome-euro.ucsc.edu/cgi-bin/das/"
+        das: "http://genome-euro.ucsc.edu/cgi-bin/das/",
+        tracks: "http://genome-euro.ucsc.edu/cgi-bin/hgTracks"
     };
 
     ucsc.getAssemblies = function() {
@@ -48,7 +49,7 @@ angular.module("ToucanJS")
     };
 
     ucsc.link = function(assembly, chrom, start, end) {
-        return 'http://genome-euro.ucsc.edu/cgi-bin/hgTracks?db='+assembly+'&position='+chrom+':'+start+'-'+end;
+        return ucsc.tracks + '?db=' + assembly + '&position=' + chrom + ':' + start + '-' + end;
     };
 
     return ucsc;

@@ -4,8 +4,7 @@ angular.module("ToucanJS")
         restrict: 'E',
         templateUrl: 'app/components/offcanvas/offcanvas.html',
         transclude: true,
-        scope: {
-        },
+        scope: false,
         link: function(scope, elem, attr) {
             // init offcanvas
             elem.addClass('offcanvas');

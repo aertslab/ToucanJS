@@ -17,12 +17,10 @@ http://tomcat.esat.kuleuven.be/axis/ToucanSOAPService.jws?wsdl
 
 ##  New features
 
-* get sequences => server-side job (e.g. via twoBitToFa)
-* continuous track => upload & parse bigWig (how to position them in current graph ?)
-* feature actions => move to foreground / background, center (?)
-* jobs => queue, status, link to GFF files, show / hide related features from GFF
-* cluster buster => bed / fasta, motif locator integration
-* motif collector 20k => search interface in PWM catalogue, service
+* jobs 					=> queue, status, link to GFF files, show / hide related features from GFF
+* cluster buster 		=> bed / fasta, motif locator integration
+* motif collector 20k 	=> search interface in PWM catalogue, service
+
 * exports: fasta, bed, gff, bigWig, workspace, image
 * twoBit files locally to use twoBitToFa (?)
 * info for files, regions, features
@@ -33,18 +31,15 @@ http://tomcat.esat.kuleuven.be/axis/ToucanSOAPService.jws?wsdl
 
 ## CR's
 
-* offcanvas sidebar => proposal : fix sidebar with tabs, possibility to have multiple tabs open simultanously
-* get sequences => web worker ?
-* rename sequences on cut ?
-* support BED files
-* when region is hidden => disable reverse and move
+* sequences 		=> modal progress infobox, move to web worker, add also server-side job (e.g. via twoBitToFa)
+* offcanvas 		=> change to e.g. fix sidebar with tabs, possibility to have multiple tabs open simultanously
+* features		 	=> add group feature actions, move to foreground / background, center, when region is hidden disable reverse and move, cut one, rename sequences on cut ?
+* search			=> add mouseover tooltip
+* bigwig files		=> position over/under current region
+* bed files 		=> show/hide trigger should show/hide sequences from this file ?
 * when region (or file ?) is hidden => share its space amongst rest of displayed regions
-* add search mousehoover info
 
 
 ## PR's
 
-* brushing on one axis changes the other
-* toggles (show/hide, swap, move, color change) causes zoom reset
-* on rare occasions scope.options are not saved after file upload
-
+* sometimes the offcanvas is not hiding

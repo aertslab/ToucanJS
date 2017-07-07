@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <link rel="stylesheet" href="assets/libs/bootstrap/css/bootstrap.min.css" type="text/css">
     <link rel="stylesheet" href="assets/libs/bootstrap-colorpicker/css/bootstrap-colorpicker.min.css">
@@ -20,7 +20,11 @@
     <script type="text/javascript" src="assets/libs/igv.js/igv-1.0.7.js"></script>
 
     <script type="text/javascript" src="app/app.module.js"></script>
+    <script type="text/javascript" src="app/app.filter.js"></script>
+    <script type="text/javascript" src="app/components/idb/idb.js"></script>
+    <script type="text/javascript" src="app/components/motifDB/motifdb.js"></script>
     <script type="text/javascript" src="app/components/ucsc/ucsc.js"></script>
+    <script type="text/javascript" src="app/components/parser/parser.js"></script>
     <script type="text/javascript" src="app/components/offcanvas/offcanvas.js"></script>
     <script type="text/javascript" src="app/components/visualization/visualization.js"></script>
     <script type="text/javascript" src="assets/libs/d3/d3-v4.2.0-alt.js"></script>
@@ -32,7 +36,7 @@
     </title>
 </head>
 <body data-ng-app="ToucanJS" data-ng-controller="AppController as ctrl">
-    <div id="indicatorDB" ng-show="DBRequests > 0">
+    <div id="indicatorDB" data-ng-show="DBRequests > 0">
         <i class="animated infinite pulse material-icons red" title="Database in use. Running {{DBRequests}} transactions.">save</i>
     </div>
     <div class="container" id="top">
@@ -53,6 +57,7 @@
                         <li><a class="pointer" data-toggle="offcanvas" data-target="#sequencesOffcanvas">Regions</a></li>
                         <li><a class="pointer" data-toggle="offcanvas" data-target="#featuresOffcanvas">Features</a></li>
                         <li><a class="pointer" data-toggle="offcanvas" data-target="#searchOffcanvas">Search</a></li>
+                        <li><a class="pointer" data-toggle="modal" data-target="#motifDBModal">MotifDB</a></li>
                         <li><a class="pointer" data-toggle="offcanvas" data-target="#optionsOffcanvas">Options</a></li>
                         <li><a class="pointer" data-ng-click="ctrl.clearWorkspace()">Clear</a></li>
                         <li><a class="pointer" data-toggle="modal" data-target="#aboutModal">About</a></li>
@@ -85,7 +90,6 @@
                             </span>
                             <span data-ng-if="!workspace.loading && workspace.sequencesLength != 0">
                                 Loaded {{workspace.sequenceFeaturesLength}} features for {{workspace.sequencesLength}} regions from {{workspace.filesLength}} files
-                                <a class="pointer pull-right" title="Cut regions" data-ng-click="ctrl.cutSequencesStart()" ng-class="{hiddenFeature: !cut.cutting}"><i class="material-icons">content_cut</i></a>
                             </span>
                         </div>
                         <visualization data-ng-show="workspace.sequencesLength != 0" options="options" workspace="workspace" search="search" move="move" cut="cut">
@@ -101,7 +105,8 @@
                             <li data-ng-repeat="file in workspace.files">
                                 <span class="">{{file.name}}</span>
                                 <span class="pull-right">
-                                    <a class="featureToggle pointer" ng-class="{hiddenFeature: !file.show}" title="Hide / show features from this file" data-ng-click="ctrl.toggleFile(file)"><i class="material-icons">remove_red_eye</i></a>
+                                    <a class="featureToggle pointer" data-ng-class="{hiddenFeature: !file.show}" title="Hide / show features from this file" data-ng-click="ctrl.toggleFile(file)"><i class="material-icons">remove_red_eye</i></a>
+                                    <a id="color-{{ctrl.escapeID(file.ID+file.name)}}" class="featureColor pointer" data-ng-class="{hiddenFeature: !file.show}" title="Color this track" data-ng-click="ctrl.colorBigWig(file)" ng-show="file.type == 'bigWig'"><i class="material-icons">invert_colors</i></a>
                                     <a class="pointer" title="Remove this file" data-ng-click="ctrl.removeFile(file.ID)"><i class="material-icons">remove_circle</i></a>
                                 </span>
                                 <div class="clearfix"></div>
@@ -114,14 +119,19 @@
             <offcanvas id="sequencesOffcanvas">
                 <div class="panel panel-primary">
                     <div class="panel-body" style="height: {{options.height+50}}px">
-                        <h5><b>Regions</b></h5>
+                        <h5><b>Regions</b>
+                            <span class="pull-right">
+                                <a class="pointer pull-right" title="Download sequences for all regions from UCSC" data-ng-click="ctrl.getSequences()"><i class="material-icons">cloud_download</i></a>
+                                <a class="pointer pull-right" title="Cut regions" data-ng-click="ctrl.cutSequencesStart()" data-ng-class="{hiddenFeature: !cut.cutting}"><i class="material-icons">content_cut</i></a>
+                            </span>
+                        </h5>
                         <ul>
                             <li data-ng-repeat="sequence in workspace.sequences">
                                 <span class="">{{sequence.seqID}}</span>
                                 <span class="pull-right">
-                                    <a class="featureToggle pointer" ng-class="{hiddenFeature: !sequence.show}" title="Hide / show this region" data-ng-click="ctrl.toggleSequence(sequence)"><i class="material-icons">remove_red_eye</i></a>
-                                    <a class="pointer" ng-class="{hiddenFeature: !sequence.reverse}" title="Reverse compliment this sequence" data-ng-click="ctrl.reverseSequence(sequence)"><i class="material-icons">compare_arrows</i></a>
-                                    <a class="pointer" title="Move this sequence" data-ng-click="ctrl.moveSequence(sequence)" ng-class="{hiddenFeature: (move.moving) && (move.seq != sequence)}"><i class="material-icons">open_with</i></a>
+                                    <a class="featureToggle pointer" data-ng-class="{hiddenFeature: !sequence.show}" title="Hide / show this region" data-ng-click="ctrl.toggleSequence(sequence)"><i class="material-icons">remove_red_eye</i></a>
+                                    <a class="pointer" data-ng-class="{hiddenFeature: !sequence.reverse}" title="Reverse compliment this sequence" data-ng-click="ctrl.reverseSequence(sequence)"><i class="material-icons">compare_arrows</i></a>
+                                    <a class="pointer" title="Move this sequence" data-ng-click="sequence.show && ctrl.moveSequence(sequence)" data-ng-class="{hiddenFeature: (move.moving) && (move.seq != sequence)}"><i class="material-icons">open_with</i></a>
                                     <a class="pointer" title="Link to UCSC" data-ng-click="ctrl.linkUCSC(sequence)"><i class="material-icons">launch</i></a><a class="pointer" title="Remove this region" data-ng-click="ctrl.removeSequence(sequence.seqID)"><i class="material-icons">remove_circle</i></a>
                                 </span>
                                 <div class="clearfix"></div>
@@ -139,8 +149,8 @@
                             <li data-ng-repeat="feature in workspace.features track by $index | orderObjectBy: 'ID'" style="color: {{feature.color}}">
                                 <span class="">{{feature.ID}}</span>
                                 <span class="pull-right">
-                                    <a class="featureToggle pointer" ng-class="{hiddenFeature: !feature.show}" title="Hide / show this feature" data-ng-click="ctrl.toggleFeature(feature)"><i class="material-icons">remove_red_eye</i></a>
-                                    <a id="color-{{escapeID(feature.ID)}}" class="featureColor pointer" ng-class="{hiddenFeature: !feature.show}" title="Color this feature" data-ng-click="ctrl.colorFeature(feature)"><i class="material-icons">invert_colors</i></a>
+                                    <a class="featureToggle pointer" data-ng-class="{hiddenFeature: !feature.show}" title="Hide / show this feature" data-ng-click="ctrl.toggleFeature(feature)"><i class="material-icons">remove_red_eye</i></a>
+                                    <a id="color-{{ctrl.escapeID(feature.ID)}}" class="featureColor pointer" data-ng-class="{hiddenFeature: !feature.show}" title="Color this feature" data-ng-click="ctrl.colorFeature(feature)"><i class="material-icons">invert_colors</i></a>
                                     <a class="pointer" title="Remove this feature" data-ng-click="ctrl.removeFeature(feature.ID)"><i class="material-icons">remove_circle</i></a>
                                 </span>
                                 <div class="clearfix"></div>
@@ -157,39 +167,40 @@
                         <form class="form-horizontal" id="searchForm" name="searchForm">
                             <fieldset>
                                 <div class="form-group">
-                                    <label for="file" class="col-md-4 control-label">RegExp</label>
+                                    <label for="searchRegexp" class="col-md-4 control-label">RegExp</label>
                                     <div class="col-md-8">
-                                        <input class="form-control" ng-model="search.regexp" required ng-change="ctrl.searchFeatures()" ng-disabled="workspace.sequencesLoaded == 0" />
+                                        <input id="searchRegexp" name="searchRegexp" class="form-control" data-ng-model="search.regexp" required data-ng-change="ctrl.searchFeatures()" data-ng-disabled="workspace.sequencesLoaded == 0" />
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label for="file" class="col-md-4 control-label">Name</label>
+                                    <label for="searchName" class="col-md-4 control-label">Name</label>
                                     <div class="col-md-8">
-                                        <input class="form-control" ng-model="search.name" required />
+                                        <input id="searchName" name="searchName" class="form-control" data-ng-model="search.name" required />
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label for="file" class="col-md-4 control-label">Score</label>
+                                    <label for="searchScore" class="col-md-4 control-label">Score</label>
                                     <div class="col-md-8">
-                                        <input type="number" class="form-control" ng-model="search.score" required min="0" step="0.1" />
+                                        <input id="searchScore" name="searchScore" type="number" class="form-control" data-ng-model="search.score" required min="0" step="0.1" data-ng-change="updatePositioning()" />
                                     </div>
                                 </div>
                                 <div class="form-group">
-                                    <label for="file" class="col-md-4 control-label">Color</label>
-                                    <div id="cp2" class="input-group colorpicker-component colorpicker-hidden">
-                                        <input type="text" value="#00AABB" class="form-control" required />
+                                    <label for="searchColorInput" class="col-md-4 control-label">Color</label>
+                                    <div id="searchColor" class="input-group colorpicker-component colorpicker-hidden">
+                                        <input id="searchColorInput" name="searchColorInput" type="text" value="#00AABB" class="form-control" required />
                                         <span class="input-group-addon"><i></i></span>
                                     </div>
                                 </div>
                                 <div class="text-right">
                                     <br />
                                     Available {{workspace.sequencesLoaded}} / {{workspace.sequencesLength}} DNA sequences
-                                    <div ng-if="workspace.sequencesLoaded !=0 && !search.limit && !search.invalid">Found {{search.matchCount}} matches</div>
-                                    <div ng-if="search.invalid" class="red">Invalid regexp</div>
-                                    <div ng-if="search.limit" class="red">Search limit reached!</div>
-                                    <div ng-if="workspace.sequencesLoaded == 0" class="red">No sequences available!</div>
+                                    <div data-ng-if="workspace.sequencesLoaded !=0 && !search.limit && !search.invalid">Found {{search.matchCount}} matches</div>
+                                    <div data-ng-if="search.invalid" class="red">Invalid regexp</div>
+                                    <div data-ng-if="search.limit" class="red">Search limit reached!</div>
+                                    <div data-ng-if="search.exists" class="red">Feature name already existing!</div>
+                                    <div data-ng-if="workspace.sequencesLoaded == 0" class="red">No sequences available!</div>
                                     <br />
-                                    <button class="btn btn-default" type="submit" ng-disabled="workspace.sequencesLoaded == 0 || search.matches == 0 || search.limit" ng-click="searchForm.$valid && ctrl.saveSearchAsFeature()">Save</button>
+                                    <button class="btn btn-default" type="submit" data-ng-disabled="workspace.sequencesLoaded == 0 || search.matches == 0 || search.limit" data-ng-click="searchForm.$valid && ctrl.saveSearchedFeatures()">Save</button>
                                 </div>
                             </fieldset>
                         </form>
@@ -308,63 +319,55 @@
         -->
     </div>
     <div class="modal fade" id="uploadModal">
-      <div class="modal-dialog">
-        <div class="modal-content">
-          <div class="modal-header">
-            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
-            <h4 class="modal-title">Upload files</h4>
-          </div>
-          <div class="modal-body" ng-show="upload.assemblyDefined">
-            <form class="form-horizontal" id="uploadForm">
-                <fieldset>
-                    <div class="form-group">
-                        <label for="GFFfile" class="col-md-3 control-label"> GFF file(s)</label>
-                        <div class="col-md-9">
-                            <input type="text" readonly="" class="form-control" placeholder="Browse...">
-                            <input type="file" id="GFFfile" name="GFFfile" multiple>
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+                    <h4 class="modal-title">Upload files</h4>
+                </div>
+                <form class="form-horizontal" id="uploadForm" name="uploadForm">
+                    <fieldset>
+                        <div class="modal-body">
+                            <div class="form-group">
+                                <label for="BEDfile" class="col-md-3 control-label"> BED file(s)</label>
+                                <div class="col-md-9">
+                                    <input type="text" readonly="" class="form-control" placeholder="Browse...">
+                                    <input type="file" id="BEDfile" name="BEDfile" multiple>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="GFFfile" class="col-md-3 control-label"> GFF file(s)</label>
+                                <div class="col-md-9">
+                                    <input type="text" readonly="" class="form-control" placeholder="Browse...">
+                                    <input type="file" id="GFFfile" name="GFFfile" multiple>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="bigWigFile" class="col-md-3 control-label"> bigWig URL</label>
+                                <div class="col-md-9">
+                                    <input type="url" id="bigWigFile" name="bigWigFile" class="form-control" data-ng-model="upload.bigWigFile">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="uploadAssembly" class="col-md-3 control-label">Assembly</label>
+                                <div class="col-md-9">
+                                    <select id="uploadAssembly" class="form-control" data-ng-model="options.assembly">
+                                        <option value=''>- select -</option>
+                                        <option value="{{assembly}}" data-ng-repeat="assembly in UCSCassemblies">{{assembly}}</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-12 text-center red">
+                                {{upload.message}}
+                            </div>
                         </div>
-                    </div>
-                    <!--
-                    <div class="form-group">
-                        <label for="BEDfile" class="col-md-3 control-label"> BED file(s)</label>
-                        <div class="col-md-9">
-                            <input type="text" readonly="" class="form-control" placeholder="Browse...">
-                            <input type="file" id="BEDfile" name="BEDfile" multiple>
+                        <div class="modal-footer">
+                            <button type="submit" class="btn btn-default" data-ng-click="ctrl.uploadFile()">Upload</button>
                         </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="bigWigFile" class="col-md-3 control-label"> bigWig file(s)</label>
-                        <div class="col-md-9">
-                            <input type="text" readonly="" class="form-control" placeholder="Browse...">
-                            <input type="file" id="bigWigFile" name="bigWigFile" multiple>
-                        </div>
-                    </div>
-                    -->
-                </fieldset>
-            </form>
-            {{message}}
-          </div>
-          <div class="modal-footer" ng-show="upload.assemblyDefined">
-            <button type="button" class="btn btn-default" data-ng-click="ctrl.uploadFile($event)">Upload</button>
-          </div>
-          <div class="modal-body" ng-hide="upload.assemblyDefined">
-            <form class="form-horizontal" id="assemblyForm">
-                <fieldset>
-                    <div class="form-group">
-                        <label for="file" class="col-md-2 control-label">Assembly</label>
-                        <div class="col-md-10">
-                            <select class="form-control" ng-model="upload.assembly" ng-options="assembly as assembly for assembly in UCSCassemblies"></select>
-                        </div>
-                    </div>
-                </fieldset>
-            </form>
-            {{message}}
-          </div>
-          <div class="modal-footer" ng-hide="upload.assemblyDefined">
-            <button type="button" class="btn btn-default" data-ng-click="ctrl.updateAssembly()">Apply</button>
-          </div>
+                    </fieldset>
+                </form>
+            </div>
         </div>
-      </div>
     </div>
     <div class="modal fade" id="aboutModal">
       <div class="modal-dialog">
@@ -408,13 +411,13 @@
                 <div class="form-group">
                     <label for="cutStart" class="col-md-3 control-label">Start</label>
                     <div class="col-md-9">
-                        <input name="cutStart" type="number" class="form-control" ng-model="cut.start" />
+                        <input name="cutStart" type="number" class="form-control" data-ng-model="cut.start" />
                     </div>
                 </div>
                 <div class="form-group">
                     <label for="cutStop" class="col-md-3 control-label">Stop</label>
                     <div class="col-md-9">
-                        <input name="cutStop" type="number" class="form-control" ng-model="cut.end" />
+                        <input name="cutStop" type="number" class="form-control" data-ng-model="cut.end" />
                     </div>
                 </div>
             </fieldset>
@@ -425,10 +428,98 @@
         </div>
       </div>
     </div>
+    <div class="modal fade" id="downloadModal">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+            <h4 class="modal-title">Restrict view</h4>
+          </div>
+          <div class="modal-body">
+            Do you want to restrict the view to the selected region ?<br /><br />
+            <fieldset>
+                <div class="form-group">
+                    <label for="cutStart" class="col-md-3 control-label">Start</label>
+                    <div class="col-md-9">
+                        <input name="cutStart" type="number" class="form-control" data-ng-model="cut.start" />
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="cutStop" class="col-md-3 control-label">Stop</label>
+                    <div class="col-md-9">
+                        <input name="cutStop" type="number" class="form-control" data-ng-model="cut.end" />
+                    </div>
+                </div>
+            </fieldset>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-ng-click="ctrl.cutSequencesDo()">Cut</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal fade" id="motifDBModal">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+            <h4 class="modal-title">MotifDB</h4>
+          </div>
+          <div class="modal-body clearfix" ng-if="!motifs.showMotifDetails && !motifs.showTFDetails">
+            <fieldset>
+                <div class="form-group">
+                    <label for="cutStart" class="col-md-3 control-label">Search</label>
+                    <div class="col-md-9">
+                        <input name="searchID" type="text" class="form-control" data-ng-model="motifs.searchID" />
+                    </div>
+                </div>
+            </fieldset>
+            <div class="col-md-8 table-responsive">
+                <table class="">
+                    <tr><td><b>Motifs:</b></td></tr>
+                    <tr data-ng-repeat="motif in motifs.motifList | filter: motifs.searchID | limitTo: 30"><td><a class="pointer" data-ng-click="ctrl.showMotifDetails(motif)">{{motif}}</a></td></tr>
+                    <tr data-ng-show="(motifs.motifList | filter:motifs.searchID).length > 30"><td><i>... and {{(motifs.motifList | filter: motifs.searchID).length - 30}} more</i></td></tr>
+                </table>
+            </div>
+            <div class="col-md-4 table-responsive">
+                <table class="">
+                    <tr><td><b>TFs:</b></td></tr>
+                    <tr data-ng-repeat="tf in motifs.tfList | filter: motifs.searchID | limitTo:30" ><td><a class="pointer" data-ng-click="ctrl.showTFDetails(tf)">{{tf}}</a></td></tr>
+                    <tr data-ng-show="(motifs.tfList | filter:motifs.searchID).length > 30"><td><i>... and {{(motifs.tfList | filter: motifs.searchID).length - 30}} more</i></td></tr>
+                </table>
+            </div>
+          </div>
+          <div class="modal-body clearfix" ng-if="motifs.showMotifDetails">
+            <div class="col-md-12 table-responsive">
+                <table class="">
+                    <tr>
+                        <td><b>Logo:</b></td>
+                        <td><img data-ng-src="{{motifs.details.logo}}" /></td>
+                    </tr>
+                    <tr>
+                        <td><b>Length:</b></td>
+                        <td>{{motifs.details.length}}
+                    </tr>
+                </table>
+            </div>
+          </div>
+          <div class="modal-body clearfix" ng-if="motifs.showTFDetails">
+            <div class="col-md-8 table-responsive">
+                <h4>{{motifs.details.name}}</h4>
+                <table class="">
+                    <tr><td><b>Associated motifs:</b></td></tr>
+                    <tr data-ng-repeat="motif in motifs.details.motif_ids" ><td><a class="pointer" data-ng-click="ctrl.showMotifDetails(motif)">{{motif}}</a></td></tr>
+                </table>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-ng-if="motifs.showMotifDetails || motifs.showTFDetails" data-ng-click="motifs.showTFDetails = false; motifs.showMotifDetails = false">Back</button>
+            <button type="button" class="btn btn-default" data-ng-if="!motifs.showMotifDetails && !motifs.showTFDetails" data-dismiss="modal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
     <script type="text/javascript">
-        //$.material.init();
-        //$(function() {
-        //});
     </script>
 </body>
 </html>
