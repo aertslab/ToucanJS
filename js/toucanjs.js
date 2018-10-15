@@ -51,7 +51,6 @@ function ToucanJs() {
         options.axisTicksSpacing = 100;
 
         options.backgroundColor = 'white';
-        options.titleText = 'TOUCANJS';
 
         options.featureColorsSheet = null;
         options.fillOpacity = 0.3;
@@ -205,41 +204,11 @@ function ToucanJs() {
     }
 
 
-    function setTitle(titleText) {
-        /* Set title of SVG. */
-
-        if (titleText === undefined) {
-            /* Set the title text to value specified in the options object, if it was not specified. */
-            titleText = options.titleText;
-        }
-
-        var title = toucanjsSVG.getElementById('svg_title');
-
-        if (title === null) {
-            /* Add a title element if it did not exist yet. */
-            title = document.createElementNS(svgNS, 'text');
-            title.setAttributeNS(null, 'id', 'svg_title');
-            title.setAttributeNS(null, 'y', '80');
-            title.setAttributeNS(null, 'font-size', 60);
-            title.setAttributeNS(null, 'text-anchor', 'middle');
-            title.setAttributeNS(null, 'fill', 'black');
-            var titleData = document.createTextNode(titleText);
-            title.appendChild(titleData);
-            toucanjsSVG.appendChild(title);
-        } else {
-            title.firstChild.nodeValue = titleText;
-        }
-
-        /* Center the title. */
-        title.setAttributeNS(null, 'x', ((options.longestRegionSize * options.regionLineXScaling + 400) / 2).toString());
-    }
-
-
     function setAxisTicksSpacing(axisTicksSpacing) {
         /* Set axis ticks spacing. */
 
         if (axisTicksSpacing === undefined) {
-            /* Set the title text to value specified in the options object, if it was not specified. */
+            /* Set the axis ticks spacing to value specified in the options object, if it was not specified. */
             axisTicksSpacing =  options.axisTicksSpacing;
         }
 
@@ -249,7 +218,7 @@ function ToucanJs() {
         /* Create a new axisGroup. */
         var axisGroup = document.createElementNS(svgNS, 'g');
         axisGroup.setAttributeNS(null, 'id', 'svg_axis');
-        axisGroup.setAttributeNS(null, 'transform', 'matrix(' + options.regionLineXScaling.toString() + ' 0  0 1 300 200)');
+        axisGroup.setAttributeNS(null, 'transform', 'matrix(' + options.regionLineXScaling.toString() + ' 0  0 1 300 50)');
 
         var axisBar = document.createElementNS(svgNS, 'path');
         axisBar.setAttributeNS(null, 'fill', 'none');
@@ -405,9 +374,6 @@ function ToucanJs() {
         /* Set background. */
         setBackground();
 
-        /* Set and center title. */
-        setTitle(options.titleText);
-
         /* Set axis tick spacing. */
         setAxisTicksSpacing(options.axisTicksSpacing);
 
@@ -430,7 +396,7 @@ function ToucanJs() {
                 regionGroup = document.createElementNS(svgNS, 'g');
 
                 regionGroup.setAttributeNS(null, 'id', regionGroupID);
-                regionGroup.setAttributeNS(null, 'transform', 'translate(0 ' + (options.regionCount * options.regionHeight * options.regionLineYScaling + 200) + ')');
+                regionGroup.setAttributeNS(null, 'transform', 'translate(0 ' + (options.regionCount * options.regionHeight * options.regionLineYScaling + 50) + ')');
 
                 var regionName = document.createElementNS(svgNS, 'text');
                 regionName.setAttributeNS(null, 'x', '280');
@@ -544,7 +510,7 @@ function ToucanJs() {
 
         /* Update the size of the SVG viewBox. */
         var svgHeight = (options.regionCount * options.regionHeight * options.regionLineYScaling
-                         + options.regionHeight * options.regionLineYScaling + 200).toString();
+                         + options.regionHeight * options.regionLineYScaling + 50).toString();
         var svgWidth = (options.longestRegionSize * options.regionLineXScaling + 400).toString();
         toucanjsSVG.setAttribute('viewBox', '0 0 ' + svgWidth + ' ' + svgHeight);
     }
