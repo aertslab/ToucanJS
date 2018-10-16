@@ -9,6 +9,28 @@ function ToucanJs() {
     var svgdev = document.getElementById('svg');
     var featureIDsdiv = document.getElementById('feature_ids');
 
+    var gffFileInput = document.getElementById('gff_file_input');
+    var buttonResetSettings = document.getElementById('button_reset_settings');
+    var regionLineXScalingInput = document.getElementById('region_line_X_scaling');
+    var regionLineXScalingOutput = document.getElementById('region_line_X_scaling_value');
+    var regionLineYScalingInput = document.getElementById('region_line_Y_scaling');
+    var regionLineYScalingOutput = document.getElementById('region_line_Y_scaling_value');
+    var featureScoreScalingInput = document.getElementById('feature_score_scaling');
+    var featureScoreScalingOutput = document.getElementById('feature_score_scaling_value');
+    var regionHeightInput = document.getElementById('region_height');
+    var regionHeightOutput = document.getElementById('region_height_value');
+    var axisTicksSpacingInput = document.getElementById('axis_ticks_spacing');
+    var axisTicksSpacingOutput = document.getElementById('axis_ticks_spacing_value');
+
+    gffFileInput.addEventListener('change', readGFFFile, false);
+    buttonResetSettings.addEventListener('click', resetSettings, false);
+
+    regionLineXScalingInput.addEventListener('change', updateOptionsValues, false);
+    regionLineYScalingInput.addEventListener('change', updateOptionsValues, false);
+    featureScoreScalingInput.addEventListener('change', updateOptionsValues, false);
+    regionHeightInput.addEventListener('change', updateOptionsValues, false);
+    axisTicksSpacingInput.addEventListener('change', updateOptionsValues, false);
+
     var toucanjsSVGandSVGDefs = createToucanJsSVG();
     var toucanjsSVG = toucanjsSVGandSVGDefs.toucanjsSVG;
     var toucanjsSVGDefs = toucanjsSVGandSVGDefs.toucanjsSVGDefs;
@@ -17,6 +39,10 @@ function ToucanJs() {
     var gffFeatures = [];
 
     var options = {};
+
+    /* Set default values for all options. */
+    resetSettings();
+
 
     function createToucanJsSVG() {
         var toucanjsSVG = document.createElementNS(svgNS, 'svg');
@@ -33,9 +59,8 @@ function ToucanJs() {
         return {'toucanjsSVG' : toucanjsSVG, 'toucanjsSVGDefs': toucanjsSVGDefs};
     }
 
-    function reset() {
-        gffFeatures = [];
 
+    function resetSettings() {
         options = {};
 
         options.seqIDToRegionSize = {};
@@ -56,12 +81,64 @@ function ToucanJs() {
         options.fillOpacity = 0.3;
         options.fillOpacityOnHover = 0.9;
 
+        regionLineXScalingInput.value = options.regionLineXScaling;
+        regionLineYScalingInput.value = options.regionLineYScaling;
+        featureScoreScalingInput.value = options.featureScoreScaling;
+        regionHeightInput.value = options.regionHeight;
+        axisTicksSpacingInput.value = options.axisTicksSpacing;
+        regionLineYScalingInput.value = options.regionLineYScaling;
+
+        /* Display reseted option values. */
+        updateOutputOptionsValues();
+
+        /* Replace SVG. */
+        replaceToucanSVG();
+
+        /* Redraw SVG with reseted settings. */
+        drawSVG();
+    }
+
+
+    function replaceToucanSVG() {
         /* Replace old toucanjsSVG, with new one. */
         var toucanjsSVGOld = toucanjsSVG;
         var toucanjsSVGandSVGDefs = createToucanJsSVG();
         toucanjsSVG = toucanjsSVGandSVGDefs.toucanjsSVG;
         toucanjsSVGDefs = toucanjsSVGandSVGDefs.toucanjsSVGDefs;
         svgdev.replaceChild(toucanjsSVG, toucanjsSVGOld);
+    }
+
+
+    function updateOptionsValues() {
+        updateOptionsValuesFromInputs();
+        updateOutputOptionsValues();
+    }
+
+
+    function updateOptionsValuesFromInputs() {
+        /* Start drawing regions from the top. */
+        options.regionCount = 0;
+
+        options.regionLineXScaling = parseFloat(regionLineXScalingInput.value);
+        options.regionLineYScaling = parseFloat(regionLineYScalingInput.value);
+        options.featureScoreScaling = parseFloat(featureScoreScalingInput.value);
+        options.regionHeight = parseInt(regionHeightInput.value);
+        options.axisTicksSpacing = parseInt(axisTicksSpacingInput.value);
+
+        /* Replace SVG. */
+        replaceToucanSVG();
+
+        /* Redraw SVG with new settings. */
+        drawSVG();
+    }
+
+
+    function updateOutputOptionsValues() {
+        regionLineXScalingOutput.value = options.regionLineXScaling;
+        regionLineYScalingOutput.value = options.regionLineYScaling;
+        featureScoreScalingOutput.value = options.featureScoreScaling;
+        regionHeightOutput.value = options.regionHeight;
+        axisTicksSpacingOutput.value = options.axisTicksSpacing;
     }
 
 
@@ -145,6 +222,7 @@ function ToucanJs() {
         return filename.slice((filename.lastIndexOf(".") - 1 >>> 0) + 2).toLowerCase();
     }
 
+
     function readGFFFile(evt) {
         // Retrieve the first (and only!) File from the FileList object.
         var gffFile = evt.target.files[0];
@@ -159,21 +237,19 @@ function ToucanJs() {
             reader.onload = function (e) {
                 var contents = e.target.result;
 
-                // alert("Got the file.\n"
-                //     + "name: " + gffFile.name + "\n"
-                //     + "type: " + gffFile.type + "\n"
-                //     + "size: " + gffFile.size + " bytes\n"
-                //     + "starts with: " + contents.substr(1, contents.indexOf("\n"))
-                // );
-
-                //console.log(contents.split('\n'));
-
-                gffFeatures = [];
-
                 // Parse each GFF line and add each GFF feature to gffFeatures.
                 contents.split('\n').forEach(ForEachGFFLine);
 
                 console.log('nbr of GFF features: ' + gffFeatures.length);
+
+                /* Start drawing regions from the top. */
+                options.regionCount = 0;
+
+                /* Replace SVG. */
+                replaceToucanSVG();
+
+                /* Redraw SVG with new settings. */
+                drawSVG();
             };
 
             reader.readAsText(gffFile);
@@ -538,47 +614,11 @@ function ToucanJs() {
         }
     }
 
-
-    reset();
-
     return {
         'readGFFFile': readGFFFile,
         'drawSVG': drawSVG,
-        'reset': reset
+        'resetSettings': resetSettings,
+        'updateOptionsValues': updateOptionsValues
     }
 }
-
-// (function() {
-//     constructor: ToucanJs,
-//     this.getName = function() {
-//         return this.name;
-//     };
-//     this.getMessage = function() {
-//         return this.message;
-//     };
-//     //this.printb = printa;
-//     // this.readGFFFile2 = this.readGFFFile;
-//
-// }).call(ToucanJs.prototype);
-
-
-// GFFFeature.prototype = {
-//     constructor: GFFFeature,
-//     saveScore:function (theScoreToAdd)  {
-//         this.quizScores.push(theScoreToAdd)
-//     },
-//     showNameAndScores:function ()  {
-//         var scores = this.quizScores.length > 0 ? this.quizScores.join(",") : "No Scores Yet";
-//         return this.name + " Scores: " + scores;
-//     },
-//     changeEmail:function (newEmail)  {
-//         this.email = newEmail;
-//         return "New Email Saved: " + this.email;
-//     }
-//     changeEmail2:function (newEmail)  {
-//         this.email = newEmail;
-//         return "New Email Saved: " + this.email;
-//     }
-// }
-
 
