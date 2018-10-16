@@ -11,6 +11,7 @@ function ToucanJs() {
 
     var gffFileInput = document.getElementById('gff_file_input');
     var buttonResetSettings = document.getElementById('button_reset_settings');
+    var buttonSaveSVG = document.getElementById('button_save_svg');
     var regionLineXScalingInput = document.getElementById('region_line_X_scaling');
     var regionLineXScalingOutput = document.getElementById('region_line_X_scaling_value');
     var regionLineYScalingInput = document.getElementById('region_line_Y_scaling');
@@ -24,6 +25,7 @@ function ToucanJs() {
 
     gffFileInput.addEventListener('change', readGFFFile, false);
     buttonResetSettings.addEventListener('click', resetSettings, false);
+    buttonSaveSVG.addEventListener('click', saveSVG, false);
 
     regionLineXScalingInput.addEventListener('change', updateOptionsValues, false);
     regionLineYScalingInput.addEventListener('change', updateOptionsValues, false);
@@ -67,6 +69,7 @@ function ToucanJs() {
         options.featureNames = new Set();
         options.featureNamesToBase64 = {};
         options.featureNamesToColors = {};
+        options.featureNamesBase64ToColors = {};
         options.regionLineXScaling = 1.0;
         options.regionLineYScaling = 1.0;
         options.featureScoreScaling = 1.0;
@@ -139,6 +142,34 @@ function ToucanJs() {
         featureScoreScalingOutput.value = options.featureScoreScaling;
         regionHeightOutput.value = options.regionHeight;
         axisTicksSpacingOutput.value = options.axisTicksSpacing;
+    }
+
+
+    function saveSVG() {
+        /* Add real SVG header. */
+        var svg_header = '<?xml version="1.0"?>\n<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"\n  "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">\n<svg xmlns="http://www.w3.org/2000/svg"';
+        var svg_str = svgdev.innerHTML.trimStart().replace('<svg class="toucanjs_svg"', svg_header);
+
+        /* Replace CSS color class with concrete values. */
+        for (var colorClass in options.featureNamesBase64ToColors) {
+            svg_str = svg_str.replace(
+                new RegExp('class="' + colorClass + '"', 'g'),
+                'fill="' + options.featureNamesBase64ToColors[colorClass] + '" stroke="' + options.featureNamesBase64ToColors[colorClass] + '" fill-opacity="0.3" stroke-opacity="0.3"'
+            );
+        }
+
+        /* Push download of SVG file. */
+        var toucan_svg_filename = 'toucanjs.svg';
+        var element = document.createElement('a');
+        element.setAttribute('href', 'data:application/octet-stream,' + encodeURIComponent(svg_str));
+        element.setAttribute('download', toucan_svg_filename);
+
+        element.style.display = 'none';
+        document.body.appendChild(element);
+
+        element.click();
+
+        document.body.removeChild(element);
     }
 
 
@@ -380,6 +411,9 @@ function ToucanJs() {
 
                 /* Store mapping of feature name to base64 encoded version. */
                 options.featureNamesToBase64[featureName] = featureNameBase64;
+
+                /* Assign the same color to base64 encoded version feature name dictionary. */
+                options.featureNamesBase64ToColors[featureNameBase64] = randomColorsForFeatures[colorIdx];
             }
 
             /* Insert new CSS rule for feature so the color for this feature can be changed easily everywhere
@@ -601,6 +635,7 @@ function ToucanJs() {
 
         /* Update the color for the specified featureName. */
         options.featureNamesToColors[featureName] = colorValue;
+        options.featureNamesBase64ToColors[options.featureNamesToBase64[featureName]] = colorValue;
     }
 
 
